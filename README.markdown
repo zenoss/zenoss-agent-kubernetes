@@ -7,11 +7,31 @@ Zenoss.
 
 The agent is configured with the following environment variables.
 
-| Environment    | Default           | Required | Description                      |
-| -------------- | ----------------- | -------- | -------------------------------- |
-| CLUSTER_NAME   |                   | yes      | Kubernetes cluster name          |
-| ZENOSS_ADDRESS | api.zenoss.io:443 | yes      | Zenoss API address               |
-| ZENOSS_API_KEY |                   | yes      | Zenoss API key                   |
+| Environment    | Default             | Required | Description                      |
+| -------------- | ------------------- | -------- | -------------------------------- |
+| CLUSTER_NAME   |                     | yes      | Kubernetes cluster name          |
+| ZENOSS_ADDRESS | `api.zenoss.io:443` | yes      | Zenoss API address               |
+| ZENOSS_API_KEY |                     | yes      | Zenoss API key                   |
+
+It is also possible to configure the agent to send the same data to multiple
+Zenoss endpoints. This isn't commonly done, but could potentially be useful if
+you'd like to send the same data to separate tenants.
+
+To send data to multiple Zenoss endpoints you would set the following
+environment variables instead of ZENOSS_ADDRESS and ZENOSS_API_KEY.
+
+* ZENOSS1_NAME
+* ZENOSS1_ADDRESS
+* ZENOSS1_API_KEY
+* ZENOSS2_NAME
+* ZENOSS2_ADDRESS
+* ZENOSS2_API_KEY
+* etc.
+
+You can only configure up to 9 (ZENOSS9_*) endpoints way. The ZENOSS*_NAME
+environment variable gives a name to each endpoint, and is only used for
+logging purposes. Setting ZENOSS*_ADDRESS is optional. It will default to
+`api.zenoss.io:443` just like ZENOSS_ADDRESS.
 
 ## Deployment
 
@@ -77,7 +97,7 @@ Kubernetes cluster.
           serviceAccountName: zenoss-agent-kubernetes
           containers:
           - name: zenoss-agent-kubernetes
-            image: zenoss/zenoss-agent-kubernetes
+            image: zenoss/zenoss-agent-kubernetes:latest
             env:
             - name: CLUSTER_NAME
               value: YOUR_CLUSTER_NAME_HERE
@@ -98,3 +118,17 @@ metadata:
   name: zenoss-agent-kubernetes
 EOF
 ```
+
+See [kubernetes-example.yml] for an example Kubernetes template that includes
+all of the resources above. Be sure to replace all occurrences of _TODO_ with
+appropriate values.
+
+### Other Considerations
+
+The example Kubernetes templates include the Zenoss API key directly in the
+template as the value for the ZENOSS_API_KEY environment variable. This is not
+a good security practice. You would most likely want to use Kubernetes'
+_secrets_ support for this instead.
+
+
+[kubernetes-example.yml]: https://github.com/zenoss/zenoss-agent-kubernetes/blob/master/kubernetes-example.yml

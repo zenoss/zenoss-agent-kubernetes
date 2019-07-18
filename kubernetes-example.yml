@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zenoss-agent-kubernetes
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: system:zenoss-agent-kubernetes 
+rules:
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["nodes", "pods"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: zenoss-agent-kubernetes
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:zenoss-agent-kubernetes
+subjects:
+- kind: ServiceAccount
+  name: zenoss-agent-kubernetes
+  namespace: kube-system
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: zenoss-agent-kubernetes
+  namespace: kube-system
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        task: monitoring
+    spec:
+      serviceAccountName: zenoss-agent-kubernetes
+      containers:
+      - name: zenoss-agent-kubernetes
+        image: zenoss/zenoss-agent-kubernetes:latest
+        env:
+        - name: CLUSTER_NAME
+          value: TODO
+        - name: ZENOSS_API_KEY
+          value: TODO

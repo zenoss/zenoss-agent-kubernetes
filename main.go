@@ -2,25 +2,16 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
-	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-
-	zenoss "github.com/zenoss/zenoss-protobufs/go/cloud/data_receiver"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -31,11 +22,13 @@ import (
 )
 
 const (
-	paramKubeconfig    = "kubeconfig"
-	paramClusterName   = "cluster-name"
-	paramZenossAddress = "zenoss-address"
-	paramZenossAPIKey  = "zenoss-api-key"
+	paramKubeconfig    = "KUBECONFIG"
+	paramClusterName   = "CLUSTER_NAME"
+	paramZenossName    = "ZENOSS_NAME"
+	paramZenossAddress = "ZENOSS_ADDRESS"
+	paramZenossAPIKey  = "ZENOSS_API_KEY"
 
+	defaultZenossName    = "zenoss"
 	defaultZenossAddress = "api.zenoss.io:443"
 
 	metricsAPI = "apis/metrics.k8s.io/v1beta1"
@@ -63,8 +56,19 @@ const (
 )
 
 var (
-	clusterName string
+	clusterName     string
+	zenossEndpoints map[string]*zenossEndpoint
 )
+
+type zenossEndpoint struct {
+	Name    string
+	Address string
+	APIKey  string
+}
+
+func (z zenossEndpoint) String() string {
+	return fmt.Sprintf("name=%s address=%s apiKey=%s", z.Name, z.Address, z.APIKey)
+}
 
 func main() {
 	sigintC := make(chan os.Signal, 1)
@@ -93,12 +97,7 @@ func main() {
 		log.Fatalf("kubernetes error: %v", err)
 	}
 
-	zenossClient, err := getZenossClient(ctx)
-	if err != nil {
-		log.Fatalf("zenoss error: %v", err)
-	}
-
-	publisher := NewPublisher(zenossClient)
+	publisher := NewPublisher()
 	watcher := NewWatcher(k8sClientset, publisher)
 	collector := NewCollector(k8sClientset, publisher)
 
@@ -132,48 +131,80 @@ func loadConfiguration() error {
 	}
 
 	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-
 	viper.SetDefault(paramKubeconfig, defaultKubeconfig)
 	viper.SetDefault(paramClusterName, "")
+
+	clusterName = viper.GetString(paramClusterName)
+	if clusterName == "" {
+		return fmt.Errorf("%s must be set", paramClusterName)
+	}
+
+	zenossEndpointNameMap := map[string]bool{}
+	zenossEndpoints = make(map[string]*zenossEndpoint)
+
+	viper.SetDefault(paramZenossName, defaultZenossName)
 	viper.SetDefault(paramZenossAddress, defaultZenossAddress)
 	viper.SetDefault(paramZenossAPIKey, "")
 
-	flag.String(paramKubeconfig, defaultKubeconfig, "absolute path to the kubeconfig file")
-	flag.String(paramClusterName, "", "Kubernetes cluster name")
-	flag.String(paramZenossAddress, defaultZenossAddress, "Zenoss API address")
-	flag.String(paramZenossAPIKey, "", "Zenoss API key")
-
-	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-	pflag.Parse()
-	viper.BindPFlags(pflag.CommandLine)
-
-	kubeconfig := viper.GetString(paramKubeconfig)
-	clusterName = viper.GetString(paramClusterName)
+	zenossName := viper.GetString(paramZenossName)
 	zenossAddress := viper.GetString(paramZenossAddress)
 	zenossAPIKey := viper.GetString(paramZenossAPIKey)
 
-	if clusterName == "" {
-		return fmt.Errorf("%s must be specified", paramClusterName)
+	if zenossAPIKey != "" {
+		zenossEndpointNameMap[zenossName] = true
+		zenossEndpoints[zenossName] = &zenossEndpoint{
+			Name:    zenossName,
+			Address: zenossAddress,
+			APIKey:  zenossAPIKey,
+		}
 	}
 
-	if zenossAddress == "" {
-		return fmt.Errorf("%s must be specified", paramZenossAddress)
+	for i := 1; i < 10; i++ {
+		iParamZenossName := fmt.Sprintf("ZENOSS%d_NAME", i)
+		iParamZenossAddress := fmt.Sprintf("ZENOSS%d_ADDRESS", i)
+		iParamZenossAPIKey := fmt.Sprintf("ZENOSS%d_API_KEY", i)
+
+		viper.SetDefault(iParamZenossName, "")
+		viper.SetDefault(iParamZenossAddress, defaultZenossAddress)
+		viper.SetDefault(iParamZenossAPIKey, "")
+
+		zenossName := viper.GetString(iParamZenossName)
+		zenossAddress := viper.GetString(iParamZenossAddress)
+		zenossAPIKey := viper.GetString(iParamZenossAPIKey)
+
+		if zenossName == "" && zenossAPIKey == "" {
+			// Stop trying indexed options if one is missing.
+			break
+		} else if zenossName == "" {
+			return fmt.Errorf("%s must be set", iParamZenossName)
+		} else if zenossAddress == "" {
+			return fmt.Errorf("%s must be set", iParamZenossAddress)
+		} else if zenossAPIKey == "" {
+			return fmt.Errorf("%s must be set", iParamZenossAPIKey)
+		} else if zenossEndpointNameMap[zenossName] {
+			return fmt.Errorf("%s is a duplicate %s", zenossName, paramZenossName)
+		}
+
+		zenossEndpointNameMap[zenossName] = true
+		zenossEndpoints[zenossName] = &zenossEndpoint{
+			Name:    zenossName,
+			Address: zenossAddress,
+			APIKey:  zenossAPIKey,
+		}
 	}
 
-	if zenossAPIKey == "" {
-		return fmt.Errorf("%s must be specified", paramZenossAPIKey)
+	if len(zenossEndpoints) == 0 {
+		return fmt.Errorf("%s must be set", paramZenossAPIKey)
 	}
 
-	if len(zenossAPIKey) < 12 {
-		return fmt.Errorf("%s is too short", paramZenossAPIKey)
+	zenossEndpointNames := make([]string, 0, len(zenossEndpointNameMap))
+	for name := range zenossEndpointNameMap {
+		zenossEndpointNames = append(zenossEndpointNames, name)
 	}
 
 	log.WithFields(log.Fields{
-		paramClusterName:   clusterName,
-		paramKubeconfig:    kubeconfig,
-		paramZenossAddress: zenossAddress,
-		paramZenossAPIKey:  fmt.Sprintf("%s...", zenossAPIKey[:7]),
+		"clusterName":     clusterName,
+		"zenossEndpoints": zenossEndpoints,
 	}).Print("configuration loaded")
 
 	return nil
@@ -203,15 +234,4 @@ func getKubernetesClientset() (*kubernetes.Clientset, error) {
 	}
 
 	return clientset, nil
-}
-
-func getZenossClient(ctx context.Context) (zenoss.DataReceiverServiceClient, error) {
-	address := viper.GetString(paramZenossAddress)
-	opt := grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
-	conn, err := grpc.Dial(address, opt)
-	if err != nil {
-		return nil, err
-	}
-
-	return zenoss.NewDataReceiverServiceClient(conn), nil
 }

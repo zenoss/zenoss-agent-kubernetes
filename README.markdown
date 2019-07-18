@@ -97,7 +97,7 @@ Kubernetes cluster.
           serviceAccountName: zenoss-agent-kubernetes
           containers:
           - name: zenoss-agent-kubernetes
-            image: zenoss/zenoss-agent-kubernetes:latest
+            image: docker.io/zenoss/zenoss-agent-kubernetes:latest
             env:
             - name: CLUSTER_NAME
               value: YOUR_CLUSTER_NAME_HERE

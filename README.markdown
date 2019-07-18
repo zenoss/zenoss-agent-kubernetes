@@ -60,6 +60,12 @@ Kubernetes cluster.
     - apiGroups: ["metrics.k8s.io"]
       resources: ["nodes", "pods"]
       verbs: ["get", "list", "watch"]
+    - apiGroups: [""]
+      resources: ["nodes", "namespaces", "pods"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["extensions", "apps"]
+      resources: ["deployments"]
+      verbs: ["get", "list", "watch"]
     ```
 
 3. Add a `ClusterRoleBinding`.

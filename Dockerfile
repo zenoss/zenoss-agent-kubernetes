@@ -1,7 +1,12 @@
+# Get latest certificates from Alpine.
+FROM alpine:latest AS certs
+RUN apk --no-cache --update add ca-certificates
+
+# Build using the appropriate Alpine golang image.
 FROM golang:1.12-alpine AS build
 
 # Install build toolchain dependencies.
-RUN apk --no-cache add git ca-certificates && update-ca-certificates
+RUN apk --no-cache add git
 
 RUN mkdir /build
 WORKDIR /build
@@ -25,6 +30,6 @@ RUN VERSION=$(git describe --all --exact-match `git rev-parse HEAD` | grep tags 
 
 # Build minimal image.
 FROM scratch
-COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /zenoss-agent-kubernetes /zenoss-agent-kubernetes
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 ENTRYPOINT ["/zenoss-agent-kubernetes"]

@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -56,6 +58,15 @@ const (
 )
 
 var (
+	// Version expected to be set to a tag using ldflags -X.
+	Version string
+
+	// GitCommit expected to be set to a git hash using ldflags -X.
+	GitCommit string
+
+	// BuildTime expected to be set using ldflags -X.
+	BuildTime string
+
 	clusterName     string
 	zenossEndpoints map[string]*zenossEndpoint
 )
@@ -66,11 +77,14 @@ type zenossEndpoint struct {
 	APIKey  string
 }
 
-func (z zenossEndpoint) String() string {
-	return fmt.Sprintf("name=%s address=%s apiKey=%s", z.Name, z.Address, z.APIKey)
-}
-
 func main() {
+	v := flag.Bool("version", false, "print version")
+	flag.Parse()
+	if *v {
+		printVersion()
+		os.Exit(0)
+	}
+
 	sigintC := make(chan os.Signal, 1)
 	signal.Notify(sigintC, os.Interrupt)
 
@@ -120,6 +134,20 @@ func main() {
 	}()
 
 	waitgroup.Wait()
+}
+
+func printVersion() {
+	if Version != "" {
+		fmt.Printf("Version:    %s\n", Version)
+	}
+	if GitCommit != "" {
+		fmt.Printf("Git commit: %s\n", GitCommit)
+	}
+	if BuildTime != "" {
+		fmt.Printf("Built:      %s\n", BuildTime)
+	}
+	fmt.Printf("Go version: %s\n", runtime.Version())
+	fmt.Printf("OS/Arch:    %s/%s\n", runtime.GOOS, runtime.GOARCH)
 }
 
 func loadConfiguration() error {
@@ -204,7 +232,7 @@ func loadConfiguration() error {
 
 	log.WithFields(log.Fields{
 		"clusterName":     clusterName,
-		"zenossEndpoints": zenossEndpoints,
+		"zenossEndpoints": zenossEndpointNames,
 	}).Print("configuration loaded")
 
 	return nil

@@ -9,18 +9,10 @@ node {
         app = docker.build("zenoss/zenoss-agent-kubernetes")
     }
 
-    stage('Test image') {
-        app.inside {
-            sh 'echo "Tests passed"'
-        }
-    }
-
-    /*
     stage('Push image') {
-        docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
+        docker.withRegistry('https://registry.hub.docker.com', '37c42717-4227-4508-bf2e-bfd2152f5d5a') {
             app.push("${env.BUILD_NUMBER}")
             app.push("latest")
         }
     }
-    */
 }

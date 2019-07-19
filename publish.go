@@ -18,19 +18,31 @@ import (
 
 // Publisher TODO
 type Publisher struct {
+	clients     map[string]zenoss.DataReceiverServiceClient
 	metricQueue chan *zenoss.Metric
 	modelQueue  chan *zenoss.Model
 }
 
 // NewPublisher TODO
-func NewPublisher() *Publisher {
+func NewPublisher() (*Publisher, error) {
 	metricQueue := make(chan *zenoss.Metric, metricsPerBatch)
 	modelQueue := make(chan *zenoss.Model, modelsPerBatch)
 
+	clients := make(map[string]zenoss.DataReceiverServiceClient, len(zenossEndpoints))
+	for name, endpoint := range zenossEndpoints {
+		client, err := getClient(endpoint)
+		if err != nil {
+			return nil, fmt.Errorf("error creating %s client", err)
+		}
+
+		clients[name] = client
+	}
+
 	return &Publisher{
+		clients:     clients,
 		metricQueue: metricQueue,
 		modelQueue:  modelQueue,
-	}
+	}, nil
 }
 
 // Start TODO
@@ -130,19 +142,8 @@ func (p *Publisher) AddModel(model *zenoss.Model) {
 	p.modelQueue <- model
 }
 
-func (p *Publisher) getClient(name string) (zenoss.DataReceiverServiceClient, error) {
-	endpoint, ok := zenossEndpoints[name]
-	if !ok {
-		return nil, fmt.Errorf("no Zenoss endpoint named %s", name)
-	}
-
-	opt := grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
-	conn, err := grpc.Dial(endpoint.Address, opt)
-	if err != nil {
-		return nil, err
-	}
-
-	return zenoss.NewDataReceiverServiceClient(conn), nil
+func (p *Publisher) getClient(name string) zenoss.DataReceiverServiceClient {
+	return p.clients[name]
 }
 
 func (p *Publisher) publishMetrics(ctx context.Context, worker int, metrics []*zenoss.Metric) {
@@ -156,12 +157,7 @@ func (p *Publisher) publishMetrics(ctx context.Context, worker int, metrics []*z
 		go func(endpoint *zenossEndpoint) {
 			defer waitgroup.Done()
 
-			client, err := p.getClient(endpoint.Name)
-			if err != nil {
-				endpointLog.WithFields(log.Fields{"error": err}).Error("error creating client")
-				return
-			}
-
+			client := p.getClient(endpoint.Name)
 			ctx := metadata.AppendToOutgoingContext(ctx, "zenoss-api-key", endpoint.APIKey)
 			publishMetricsToEndpoint(ctx, client, endpointLog, metrics)
 		}(endpoint)
@@ -215,12 +211,7 @@ func (p *Publisher) publishModels(ctx context.Context, worker int, models []*zen
 		go func(endpoint *zenossEndpoint) {
 			defer waitgroup.Done()
 
-			client, err := p.getClient(endpoint.Name)
-			if err != nil {
-				endpointLog.WithFields(log.Fields{"error": err}).Error("error creating client")
-				return
-			}
-
+			client := p.getClient(endpoint.Name)
 			ctx := metadata.AppendToOutgoingContext(ctx, "zenoss-api-key", endpoint.APIKey)
 			publishModelsToEndpoint(ctx, client, endpointLog, models)
 		}(endpoint)
@@ -283,4 +274,14 @@ func valueFromStringSlice(ss []string) *structpb.Value {
 			},
 		},
 	}
+}
+
+func getClient(endpoint *zenossEndpoint) (zenoss.DataReceiverServiceClient, error) {
+	opt := grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
+	conn, err := grpc.Dial(endpoint.Address, opt)
+	if err != nil {
+		return nil, err
+	}
+
+	return zenoss.NewDataReceiverServiceClient(conn), nil
 }

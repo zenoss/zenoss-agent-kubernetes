@@ -14,7 +14,6 @@ require (
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.4.0
 	github.com/zenoss/zenoss-protobufs v0.0.0-20190429202757-89476027a2e4
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect

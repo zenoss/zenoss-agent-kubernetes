@@ -11,6 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"net/http"
+	_ "net/http/pprof"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/viper"
@@ -78,11 +81,24 @@ type zenossEndpoint struct {
 }
 
 func main() {
-	v := flag.Bool("version", false, "print version")
+	versionRequested := flag.Bool("version", false, "print version")
+	profileRequested := flag.Bool("profile", false, "enable profiling")
+
 	flag.Parse()
-	if *v {
+
+	if *versionRequested {
 		printVersion()
 		os.Exit(0)
+	}
+
+	if *profileRequested {
+		go func() {
+			log.WithFields(log.Fields{
+				"address": "localhost:6060",
+			}).Info("profiling enabled")
+
+			log.Info(http.ListenAndServe("localhost:6060", nil))
+		}()
 	}
 
 	sigintC := make(chan os.Signal, 1)
@@ -111,7 +127,11 @@ func main() {
 		log.Fatalf("kubernetes error: %v", err)
 	}
 
-	publisher := NewPublisher()
+	publisher, err := NewPublisher()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	watcher := NewWatcher(k8sClientset, publisher)
 	collector := NewCollector(k8sClientset, publisher)
 

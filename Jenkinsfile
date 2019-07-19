@@ -6,7 +6,9 @@ node {
     }
 
     stage('Build image') {
-        app = docker.build("zenoss/zenoss-agent-kubernetes")
+        ansiColor('xterm') {
+            app = docker.build("zenoss/zenoss-agent-kubernetes")
+        }
     }
 
     stage('Push image') {

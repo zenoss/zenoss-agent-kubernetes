@@ -5,19 +5,18 @@ Zenoss.
 
 Contents:
 
-- [zenoss-kubernetes-agent](#zenoss-kubernetes-agent)
-  - [Dashboards](#dashboards)
-    - [Kubernetes: Multi-Cluster View](#kubernetes-multi-cluster-view)
-    - [Kubernetes: Single Cluster View](#kubernetes-single-cluster-view)
-  - [Deployment](#deployment)
-    - [Updating the Agent](#updating-the-agent)
-    - [Removing the Agent](#removing-the-agent)
-    - [Configuration](#configuration)
-  - [Data](#data)
-    - [Cluster](#cluster)
-    - [Node](#node)
-    - [Namespace](#namespace)
-    - [Pod](#pod)
+- [Dashboards](#dashboards)
+  - [Kubernetes: Multi-Cluster View](#kubernetes-multi-cluster-view)
+  - [Kubernetes: Single Cluster View](#kubernetes-single-cluster-view)
+- [Deployment](#deployment)
+  - [Updating the Agent](#updating-the-agent)
+  - [Removing the Agent](#removing-the-agent)
+  - [Configuration](#configuration)
+- [Data](#data)
+  - [Cluster](#cluster)
+  - [Node](#node)
+  - [Namespace](#namespace)
+  - [Pod](#pod)
 
 ## Dashboards
 

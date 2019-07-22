@@ -3,59 +3,217 @@
 An agent that collects metrics from a Kubernetes cluster and sends them to
 Zenoss.
 
-## Configuration
+## Dashboards
 
-The agent is configured with the following environment variables.
+The following example dashboards were created using the [data](#data) sent to
+Zenoss by this agent. You can use these examples as-is, or adapt them to your
+own needs.
 
-| Environment    | Default             | Required | Description                      |
-| -------------- | ------------------- | -------- | -------------------------------- |
-| CLUSTER_NAME   |                     | yes      | Kubernetes cluster name          |
-| ZENOSS_ADDRESS | `api.zenoss.io:443` | yes      | Zenoss API address               |
-| ZENOSS_API_KEY |                     | yes      | Zenoss API key                   |
+### Kubernetes: Multi-Cluster View
 
-It is also possible to configure the agent to send the same data to multiple
-Zenoss endpoints. This isn't commonly done, but could potentially be useful if
-you'd like to send the same data to separate tenants.
+This dashboard's scope can be updated to include multiple clusters by adding
+the agent for each cluster to the dashboard scope's _Sources_ list.
 
-To send data to multiple Zenoss endpoints you would set the following
-environment variables instead of ZENOSS_ADDRESS and ZENOSS_API_KEY.
+![Kubernetes: Multi-Cluster View](images/dashboard-multi-cluster-view.png)
 
-* ZENOSS1_NAME
-* ZENOSS1_ADDRESS
-* ZENOSS1_API_KEY
-* ZENOSS2_NAME
-* ZENOSS2_ADDRESS
-* ZENOSS2_API_KEY
-* etc.
+The tiles for this dashboard are configured as follows.
 
-You can only configure up to 9 (ZENOSS9_*) endpoints way. The ZENOSS*_NAME
-environment variable gives a name to each endpoint, and is only used for
-logging purposes. Setting ZENOSS*_ADDRESS is optional. It will default to
-`api.zenoss.io:443` just like ZENOSS_ADDRESS.
+#### Nodes by Cluster
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.cluster.nodes.total`
+* Aggregator: `none`
+
+#### Pods by Cluster
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.cluster.pods.total`
+* Aggregator: `none`
+
+#### CPU Usage by Cluster
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.cluster.cpu.ms`
+* Aggregator: `none`
+
+#### Memory Usage by Cluster
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.cluster.memory.bytes`
+* Aggregator: `none`
+
+#### Agent CPU Usage
+* Type: `Single Metric`
+* Chart type: `line`
+* Metric: `k8s.pod.cpu.ms` (entity search: `zenoss-agent-kubernetes`)
+* Chart label: `CPU Milliseconds`
+
+#### Agent Memory Usage
+* Type: `Single Metric`
+* Chart type: `line`
+* Metric: `k8s.pod.memory.bytes` (entity search: `zenoss-agent-kubernetes`)
+* Chart label: `Memory Bytes`
+
+#### Pods by Namespace
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.namespace.pods.total`
+* Aggregator: `none`
+
+#### CPU Usage by Namespace
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.namespace.cpu.ms`
+* Aggregator: `none`
+
+#### Memory by Namespace
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.namespace.memory.bytes`
+* Aggregator: `none`
+
+### Kubernetes: Single Cluster View
+
+This dashboard's scope is intended to be set to one specific Kubernetes cluster
+by adding only the agent for that cluster to the dashboard scope's _Sources_
+list.
+
+![Kubernetes: Single Cluster View](images/dashboard-single-cluster-view.png)
+
+The tiles for this dashboard are configured as follows.
+
+#### Total Nodes
+* Type: `MultiMetric`
+* Chart type: `bar`
+* Legend: `none`
+* Metric name: `k8s.cluster.nodes.total`
+* Aggregator: `none`
+
+#### Total Pods
+* Type: `MultiMetric`
+* Chart type: `bar`
+* Legend: `none`
+* Metric name: `k8s.cluster.pods.total`
+* Aggregator: `none`
+
+#### Total Containers
+* Type: `MultiMetric`
+* Chart type: `bar`
+* Legend: `none`
+* Metric name: `k8s.cluster.containers.total`
+* Aggregator: `none`
+
+#### Pods by Namespace
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.namespace.pods.total`
+* Aggregator: `none`
+
+#### Containers by Namespace
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.namespace.containers.total`
+* Aggregator: `none`
+
+#### CPU Usage by Namespace
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.namespace.cpu.ms`
+* Aggregator: `none`
+
+#### Memory Usage by Namespace
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.namespace.memory.bytes`
+* Aggregator: `none`
+
+#### CPU Usage by Node
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.node.cpu.ms`
+* Aggregator: `none`
+
+#### Memory Usage by Node
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.node.memory.bytes`
+* Aggregator: `none`
+
+#### CPU Usage by Pod
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.pod.cpu.ms`
+* Aggregator: `none`
+
+#### Memory Usage by Pod
+* Type: `MultiMetric`
+* Chart type: `line`
+* Legend: `right`
+* Metric name: `k8s.pod.memory.bytes`
+* Aggregator: `none`
 
 ## Deployment
 
 The agent is intended to be deployed within the Kubernetes cluster it will be
-monitoring. You must take the following steps to deploy the agent within a
-Kubernetes cluster.
+monitoring. There are many ways to deploy resources into a Kubernetes cluster.
+The following steps should be adaptable to your chosen method of deploying
+resources.
 
-1. Add a `ServiceAccount`.
+1. Ensure your `kubectl` is configured to use the correct context.
+
+    ```sh
+    kubectl config current-context
+    ```
+
+2. Create a _Secret_ containing your Zenoss API key.
+
+    One of the parameters we're going to need to configure for the agent is the
+    Zenoss API key it will use to publish data to Zenoss. We could configure
+    this directly as an environment variable for the agent in its _Deployment_,
+    but this is insecure. The preferred option for this kind of thing is to
+    create a Kubernetes _Secret_ to use in the agent's _Deployment_.
+
+    Be sure to replace `<API_KEY>` with your Zenoss API key.
+
+    ```sh
+    kubectl create secret generic zenoss --from-literal=api-key=<API_KEY>
+    ```
+
+3. Create a `zenoss-agent-kubernetes.yml` file with the following contents.
+
+    Be sure to replace `<CLUSTER_NAME>` with a unique name for the cluster into
+    which you're deploying the agent. This can be just about anything you like,
+    but something like a fully-qualified DNS name (doesn't need to resolve) can
+    help to make it unique. For example, when naming my Google Kubernetes Engine
+    clusters I tend to use `<cluster-name>.<project-name>`.
 
     ```yaml
     apiVersion: v1
     kind: ServiceAccount
     metadata:
       name: zenoss-agent-kubernetes
-    ```
-
-2. Add a `ClusterRole`.
-
-    ```yaml
+      namespace: kube-system
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole
     metadata:
       labels:
         kubernetes.io/bootstrapping: rbac-defaults
-      name: system:zenoss-agent-kubernetes
+      name: system:zenoss-agent-kubernetes 
     rules:
     - apiGroups: ["metrics.k8s.io"]
       resources: ["nodes", "pods"]
@@ -66,13 +224,9 @@ Kubernetes cluster.
     - apiGroups: ["extensions", "apps"]
       resources: ["deployments"]
       verbs: ["get", "list", "watch"]
-    ```
-
-3. Add a `ClusterRoleBinding`.
-
-    ```yaml
-    kind: ClusterRoleBinding
+    ---
     apiVersion: rbac.authorization.k8s.io/v1beta1
+    kind: ClusterRoleBinding
     metadata:
       name: zenoss-agent-kubernetes
     roleRef:
@@ -83,11 +237,7 @@ Kubernetes cluster.
     - kind: ServiceAccount
       name: zenoss-agent-kubernetes
       namespace: kube-system
-    ```
-
-4. Add a `Deployment`.
-
-    ```yaml
+    ---
     apiVersion: extensions/v1beta1
     kind: Deployment
     metadata:
@@ -106,35 +256,214 @@ Kubernetes cluster.
             image: docker.io/zenoss/zenoss-agent-kubernetes:latest
             env:
             - name: CLUSTER_NAME
-              value: YOUR_CLUSTER_NAME_HERE
-            - name: ZENOSS_ADDRESS
-              value: "api.zenoss.io:443"
+              value: <CLUSTER_NAME>
             - name: ZENOSS_API_KEY
-              value: YOUR_API_KEY_HERE
+              valueFrom:
+                secretKeyRef:
+                  name: zenoss
+                  key: api-key
     ```
 
-Each of these Kubernetes templates can be applied with a command such as the
-following.
+4. Apply the template.
+
+    ```sh
+    kubectl apply -f zenoss-agent-kubernetes.yml
+    ```
+
+### Updating the Agent
+
+To reconfigure the resources you would edit `zenoss-agent-kubernetes.yml` then
+run the following command. Kubernetes will identify what was changed from the
+last time you applied the template, and affect just those changes.
 
 ```sh
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: zenoss-agent-kubernetes
-EOF
+kubectl apply -f zenoss-agent-kubernetes.yml
 ```
 
-See [kubernetes-example.yml] for an example Kubernetes template that includes
-all of the resources above. Be sure to replace all occurrences of _TODO_ with
-appropriate values.
+### Removing the Agent
 
-### Other Considerations
+To remove all of the resources you run the following command.
 
-The example Kubernetes templates include the Zenoss API key directly in the
-template as the value for the ZENOSS_API_KEY environment variable. This is not
-a good security practice. You would most likely want to use Kubernetes'
-_secrets_ support for this instead.
+```sh
+kubectl delete -f zenoss-agent-kubernetes.yml
+```
 
+## Configuration
 
-[kubernetes-example.yml]: https://github.com/zenoss/zenoss-agent-kubernetes/blob/master/kubernetes-example.yml
+The agent is configured with the following environment variables.
+
+| Environment    | Default             | Required | Description             |
+| -------------- | ------------------- | -------- | ----------------------- |
+| CLUSTER_NAME   |                     | yes      | Kubernetes cluster name |
+| ZENOSS_ADDRESS | `api.zenoss.io:443` | yes      | Zenoss API address      |
+| ZENOSS_API_KEY |                     | yes      | Zenoss API key          |
+
+It is also possible to configure the agent to send the same data to multiple
+Zenoss endpoints. This isn't commonly done, but could potentially be useful if
+you'd like to send the same data to separate tenants.
+
+To send data to multiple Zenoss endpoints you would set the following
+environment variables instead of ZENOSS_ADDRESS and ZENOSS_API_KEY.
+
+* ZENOSS1_NAME
+* ZENOSS1_ADDRESS
+* ZENOSS1_API_KEY
+* ZENOSS2_NAME
+* ZENOSS2_ADDRESS
+* ZENOSS2_API_KEY
+* etc.
+
+You can configure up to 9 (ZENOSS9_*) endpoints this way. The ZENOSS*_NAME
+environment variable gives a name to each endpoint, and is only used for logging
+purposes. Setting ZENOSS*_ADDRESS is optional. It will default to
+`api.zenoss.io:443` just like ZENOSS_ADDRESS.
+
+## Data
+
+Once deployed into a Kubernetes cluster, the agent will send data about the
+following entities types to Zenoss.
+
+All models and metrics sent by the agent will have the following metadata.
+
+| Field       | Value                     |
+| ----------- | ------------------------- |
+| source-type | `zenoss.agent.kubernetes` |
+| source      | `<clusterName>`*          |
+
+\* Anytime `<clusterName>` is referenced throughout this data it refers to the
+value configured via the agent's _CLUSTER_NAME_ environment variable.
+
+### Cluster
+
+The agent will send a cluster model to Zenoss each time it starts.
+
+#### Cluster Dimensions
+
+| Dimension     | Value           |
+| ------------- | --------------- |
+| `k8s.cluster` | `<clusterName>` |
+
+#### Cluster Metadata
+
+| Field                               | Value                       |
+| ----------------------------------- | --------------------------- |
+| `name`                              | `<clusterName>`             |
+| `type`                              | `k8s.cluster`               |
+| `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>` |
+| `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>` |
+
+#### Cluster Metrics
+
+| Metric Name                    | Type  | Units        |
+| ------------------------------ | ----- | ------------ |
+| `k8s.cluster.nodes.total`      | GAUGE | nodes        |
+| `k8s.cluster.pods.total`       | GAUGE | pods         |
+| `k8s.cluster.containers.total` | GAUGE | containers   |
+| `k8s.cluster.cpu.ms`*          | GAUGE | milliseconds |
+| `k8s.cluster.memory.bytes`*    | GAUGE | bytes        |
+
+\* Cluster CPU and memory metrics are a sum of the same metrics for all containers
+in the cluster.
+
+### Node
+
+The agent will send a node model to Zenoss each time receives node information
+from the Kubernetes API. Specifically this is the `/api/v1/watch/nodes` API
+endpoint. The agent will receive information about all nodes when it starts, and
+again for each node anytime the node's properties change.
+
+#### Node Dimensions
+
+| Dimension     | Value           |
+| ------------- | --------------- |
+| `k8s.cluster` | `<clusterName>` |
+| `k8s.node`    | `<nodeName>`    |
+
+#### Node Metadata
+
+| Field                               | Value                                                                        |
+| ----------------------------------- | ---------------------------------------------------------------------------- |
+| `name`                              | `<nodeName>`                                                                 |
+| `type`                              | `k8s.node`                                                                   |
+| `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>,k8s.node=<nodeName>`                              |
+| `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>,k8s.node=<nodeName>`, `k8s.cluster=<clusterName>` |
+
+#### Node Metrics
+
+| Metric Name             | Type  | Units        |
+| ----------------------- | ----- | ------------ |
+| `k8s.node.cpu.ms`       | GAUGE | milliseconds |
+| `k8s.node.memory.bytes` | GAUGE | bytes        |
+
+Node CPU and memory metrics are those directly reported for the node.
+
+### Namespace
+
+The agent will send a namespace model to Zenoss each time receives namespace
+information from the Kubernetes API. Specifically this is the
+`/api/v1/watch/namespaces` API endpoint. The agent will receive information
+about all namespaces when it starts, and again for each namespace anytime the
+namespace's properties change.
+
+#### Namespace Dimensions
+
+| Dimension       | Value             |
+| --------------- | ----------------- |
+| `k8s.cluster`   | `<clusterName>`   |
+| `k8s.namespace` | `<namespaceName>` |
+
+#### Namespace Metadata
+
+| Field                               | Value                                                                                  |
+| ----------------------------------- | -------------------------------------------------------------------------------------- |
+| `name`                              | `<namespaceName>`                                                                      |
+| `type`                              | `k8s.namespace`                                                                        |
+| `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>`                              |
+| `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>`, `k8s.cluster=<clusterName>` |
+
+#### Namespace Metrics
+
+| Metric Name                      | Type  | Units        |
+| -------------------------------- | ----- | ------------ |
+| `k8s.namespace.pods.total`       | GAUGE | pods         |
+| `k8s.namespace.containers.total` | GAUGE | containers   |
+| `k8s.namespace.cpu.ms`*          | GAUGE | milliseconds |
+| `k8s.namespace.memory.bytes`*    | GAUGE | bytes        |
+
+\* Namespace CPU and memory metrics are a sum of the same metrics for all
+containers in the namespace.
+
+### Pod
+
+The agent will send a pod model to Zenoss each time receives pod information
+from the Kubernetes API. Specifically this is the `/api/v1/watch/pods` API
+endpoint. The agent will receive information about all namespaces when it
+starts, and again for each pod anytime the pod's properties change.
+
+#### Pod Dimensions
+
+| Dimension       | Value             |
+| --------------- | ----------------- |
+| `k8s.cluster`   | `<clusterName>`   |
+| `k8s.namespace` | `<namespaceName>` |
+| `k8s.pod`       | `<podName>`       |
+
+#### Pod Metadata
+
+| Field                               | Value                                                                                                                                                                                   |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                              | `<podName>`                                                                                                                                                                             |
+| `type`                              | `k8s.pod`                                                                                                                                                                               |
+| `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>`                                                                                                             |
+| `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>`, `k8s.cluster=<clusterName>,k8s.node=<nodeName>`, `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>` |
+
+#### Pod Metrics
+
+| Metric Name                | Type  | Units        |
+| -------------------------- | ----- | ------------ |
+| `k8s.pod.containers.total` | GAUGE | containers   |
+| `k8s.pod.cpu.ms`*          | GAUGE | milliseconds |
+| `k8s.pod.memory.bytes`*    | bytes | bytes        |
+
+\* Pod CPU and memory metrics are a sum of the same metrics for all containers in
+the pod.

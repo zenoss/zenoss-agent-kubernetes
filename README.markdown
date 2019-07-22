@@ -3,6 +3,22 @@
 An agent that collects metrics from a Kubernetes cluster and sends them to
 Zenoss.
 
+Contents:
+
+- [zenoss-kubernetes-agent](#zenoss-kubernetes-agent)
+  - [Dashboards](#dashboards)
+    - [Kubernetes: Multi-Cluster View](#kubernetes-multi-cluster-view)
+    - [Kubernetes: Single Cluster View](#kubernetes-single-cluster-view)
+  - [Deployment](#deployment)
+    - [Updating the Agent](#updating-the-agent)
+    - [Removing the Agent](#removing-the-agent)
+    - [Configuration](#configuration)
+  - [Data](#data)
+    - [Cluster](#cluster)
+    - [Node](#node)
+    - [Namespace](#namespace)
+    - [Pod](#pod)
+
 ## Dashboards
 
 The following example dashboards were created using the [data](#data) sent to
@@ -19,65 +35,74 @@ the agent for each cluster to the dashboard scope's _Sources_ list.
 The tiles for this dashboard are configured as follows.
 
 #### Nodes by Cluster
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.cluster.nodes.total`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.cluster.nodes.total`
+- Aggregator: `none`
 
 #### Pods by Cluster
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.cluster.pods.total`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.cluster.pods.total`
+- Aggregator: `none`
 
 #### CPU Usage by Cluster
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.cluster.cpu.ms`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.cluster.cpu.ms`
+- Aggregator: `none`
 
 #### Memory Usage by Cluster
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.cluster.memory.bytes`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.cluster.memory.bytes`
+- Aggregator: `none`
 
 #### Agent CPU Usage
-* Type: `Single Metric`
-* Chart type: `line`
-* Metric: `k8s.pod.cpu.ms` (entity search: `zenoss-agent-kubernetes`)
-* Chart label: `CPU Milliseconds`
+
+- Type: `Single Metric`
+- Chart type: `line`
+- Metric: `k8s.pod.cpu.ms` (entity search: `zenoss-agent-kubernetes`)
+- Chart label: `CPU Milliseconds`
 
 #### Agent Memory Usage
-* Type: `Single Metric`
-* Chart type: `line`
-* Metric: `k8s.pod.memory.bytes` (entity search: `zenoss-agent-kubernetes`)
-* Chart label: `Memory Bytes`
+
+- Type: `Single Metric`
+- Chart type: `line`
+- Metric: `k8s.pod.memory.bytes` (entity search: `zenoss-agent-kubernetes`)
+- Chart label: `Memory Bytes`
 
 #### Pods by Namespace
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.namespace.pods.total`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.namespace.pods.total`
+- Aggregator: `none`
 
 #### CPU Usage by Namespace
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.namespace.cpu.ms`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.namespace.cpu.ms`
+- Aggregator: `none`
 
 #### Memory by Namespace
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.namespace.memory.bytes`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.namespace.memory.bytes`
+- Aggregator: `none`
 
 ### Kubernetes: Single Cluster View
 
@@ -90,81 +115,92 @@ list.
 The tiles for this dashboard are configured as follows.
 
 #### Total Nodes
-* Type: `MultiMetric`
-* Chart type: `bar`
-* Legend: `none`
-* Metric name: `k8s.cluster.nodes.total`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `bar`
+- Legend: `none`
+- Metric name: `k8s.cluster.nodes.total`
+- Aggregator: `none`
 
 #### Total Pods
-* Type: `MultiMetric`
-* Chart type: `bar`
-* Legend: `none`
-* Metric name: `k8s.cluster.pods.total`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `bar`
+- Legend: `none`
+- Metric name: `k8s.cluster.pods.total`
+- Aggregator: `none`
 
 #### Total Containers
-* Type: `MultiMetric`
-* Chart type: `bar`
-* Legend: `none`
-* Metric name: `k8s.cluster.containers.total`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `bar`
+- Legend: `none`
+- Metric name: `k8s.cluster.containers.total`
+- Aggregator: `none`
 
 #### Pods by Namespace
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.namespace.pods.total`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.namespace.pods.total`
+- Aggregator: `none`
 
 #### Containers by Namespace
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.namespace.containers.total`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.namespace.containers.total`
+- Aggregator: `none`
 
 #### CPU Usage by Namespace
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.namespace.cpu.ms`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.namespace.cpu.ms`
+- Aggregator: `none`
 
 #### Memory Usage by Namespace
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.namespace.memory.bytes`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.namespace.memory.bytes`
+- Aggregator: `none`
 
 #### CPU Usage by Node
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.node.cpu.ms`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.node.cpu.ms`
+- Aggregator: `none`
 
 #### Memory Usage by Node
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.node.memory.bytes`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.node.memory.bytes`
+- Aggregator: `none`
 
 #### CPU Usage by Pod
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.pod.cpu.ms`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.pod.cpu.ms`
+- Aggregator: `none`
 
 #### Memory Usage by Pod
-* Type: `MultiMetric`
-* Chart type: `line`
-* Legend: `right`
-* Metric name: `k8s.pod.memory.bytes`
-* Aggregator: `none`
+
+- Type: `MultiMetric`
+- Chart type: `line`
+- Legend: `right`
+- Metric name: `k8s.pod.memory.bytes`
+- Aggregator: `none`
 
 ## Deployment
 
@@ -288,7 +324,7 @@ To remove all of the resources you run the following command.
 kubectl delete -f zenoss-agent-kubernetes.yml
 ```
 
-## Configuration
+### Configuration
 
 The agent is configured with the following environment variables.
 
@@ -305,13 +341,13 @@ you'd like to send the same data to separate tenants.
 To send data to multiple Zenoss endpoints you would set the following
 environment variables instead of ZENOSS_ADDRESS and ZENOSS_API_KEY.
 
-* ZENOSS1_NAME
-* ZENOSS1_ADDRESS
-* ZENOSS1_API_KEY
-* ZENOSS2_NAME
-* ZENOSS2_ADDRESS
-* ZENOSS2_API_KEY
-* etc.
+- ZENOSS1_NAME
+- ZENOSS1_ADDRESS
+- ZENOSS1_API_KEY
+- ZENOSS2_NAME
+- ZENOSS2_ADDRESS
+- ZENOSS2_API_KEY
+- etc.
 
 You can configure up to 9 (ZENOSS9_*) endpoints this way. The ZENOSS*_NAME
 environment variable gives a name to each endpoint, and is only used for logging

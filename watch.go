@@ -3,17 +3,29 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	structpb "github.com/golang/protobuf/ptypes/struct"
-	log "github.com/sirupsen/logrus"
 	zenoss "github.com/zenoss/zenoss-protobufs/go/cloud/data_receiver"
-	apps_v1beta1 "k8s.io/api/apps/v1beta1"
 	core_v1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+)
+
+// ResourceChangeType is an enumeration type.
+type ResourceChangeType int
+
+const (
+	// ResourceAdd indicates a resource was added.
+	ResourceAdd ResourceChangeType = iota
+
+	// ResourceUpdate indicates an existing resource was updated.
+	ResourceUpdate
+
+	// ResourceDelete indicates an existing resource was deleted.
+	ResourceDelete
 )
 
 // Watcher TODO
@@ -46,7 +58,17 @@ func (w *Watcher) Start(ctx context.Context) {
 	}
 
 	for _, informer := range informers {
-		informer.AddEventHandler(w)
+		informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				w.handleResource(obj, ResourceAdd)
+			},
+			UpdateFunc: func(old interface{}, new interface{}) {
+				w.handleResource(new, ResourceUpdate)
+			},
+			DeleteFunc: func(obj interface{}) {
+				w.handleResource(obj, ResourceDelete)
+			},
+		})
 		go informer.Run(stopChannel)
 	}
 
@@ -56,190 +78,177 @@ func (w *Watcher) Start(ctx context.Context) {
 	}
 }
 
-// OnAdd TODO
-func (w *Watcher) OnAdd(obj interface{}) {
+func (w *Watcher) handleResource(obj interface{}, changeType ResourceChangeType) {
 	switch v := obj.(type) {
 	case *core_v1.Node:
-		w.addNode(v)
+		w.handleNode(v, changeType)
 	case *core_v1.Namespace:
-		w.addNamespace(v)
+		w.handleNamespace(v, changeType)
 	case *core_v1.Pod:
-		w.addPod(v)
-	case *apps_v1beta1.Deployment:
-		w.addDeployment(v)
+		w.handlePod(v, changeType)
 	}
 }
 
 func getClusterTag(cluster string) string {
-	return fmt.Sprintf("k8s.cluster=%s", cluster)
+	return fmt.Sprintf(
+		"%s=%s",
+		zenossK8sClusterType, cluster)
 }
 
 func getNodeTag(cluster, node string) string {
-	return fmt.Sprintf("k8s.cluster=%s,k8s.node=%s", cluster, node)
+	return fmt.Sprintf(
+		"%s=%s,%s=%s",
+		zenossK8sClusterType, cluster,
+		zenossK8sNodeType, node)
 }
 
 func getNamespaceTag(cluster, namespace string) string {
-	return fmt.Sprintf("k8s.cluster=%s,k8s.namespace=%s", cluster, namespace)
-}
-
-func getDeploymentTag(cluster, namespace, deployment string) string {
-	return fmt.Sprintf("k8s.cluster=%s,k8s.namespace=%s,k8s.deployment=%s", cluster, namespace, deployment)
+	return fmt.Sprintf(
+		"%s=%s,%s=%s",
+		zenossK8sClusterType, cluster,
+		zenossK8sNamespaceType, namespace)
 }
 
 func getPodTag(cluster, namespace, pod string) string {
-	return fmt.Sprintf("k8s.cluster=%s,k8sspace=%s,k8s.pod=%s", cluster, namespace, pod)
+	return fmt.Sprintf(
+		"%s=%s,%s=%s,%s=%s",
+		zenossK8sClusterType, cluster,
+		zenossK8sNamespaceType, namespace,
+		zenossK8sPodType, pod)
 }
 
 func (w *Watcher) addCluster() {
 	sourceTags := []string{getClusterTag(clusterName)}
+	sinkTags := []string{getClusterTag(clusterName)}
 
-	log.WithFields(log.Fields{
-		"cluster": clusterName,
-	}).Info("add cluster")
+	dimensions := map[string]string{
+		zenossK8sClusterType: clusterName,
+	}
+
+	fields := map[string]*structpb.Value{
+		zenossNameField:         valueFromString(clusterName),
+		zenossTypeField:         valueFromString(zenossK8sClusterType),
+		zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
+		zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
+	}
 
 	w.publisher.AddModel(&zenoss.Model{
-		Dimensions: map[string]string{
-			"k8s.cluster": clusterName,
-		},
-		MetadataFields: &structpb.Struct{
-			Fields: map[string]*structpb.Value{
-				zenossNameField:         valueFromString(clusterName),
-				zenossTypeField:         valueFromString(zenossK8sClusterType),
-				zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
-			},
-		},
+		Timestamp:      time.Now().UnixNano() / 1e6,
+		Dimensions:     dimensions,
+		MetadataFields: &structpb.Struct{Fields: fields},
 	})
 }
 
-func (w *Watcher) addNode(node *core_v1.Node) {
+func (w *Watcher) handleNode(node *core_v1.Node, changeType ResourceChangeType) {
 	nodeName := node.GetName()
-	sourceTags := []string{getNodeTag(clusterName, nodeName)}
-	sinkTags := []string{getClusterTag(clusterName)}
+	nodeTag := getNodeTag(clusterName, nodeName)
+	sourceTags := []string{nodeTag}
+	sinkTags := []string{nodeTag, getClusterTag(clusterName)}
 
-	log.WithFields(log.Fields{
-		"node": nodeName,
-	}).Info("add node")
+	dimensions := map[string]string{
+		zenossK8sClusterType: clusterName,
+		zenossK8sNodeType:    nodeName,
+	}
+
+	fields := map[string]*structpb.Value{
+		zenossNameField:         valueFromString(nodeName),
+		zenossTypeField:         valueFromString(zenossK8sNodeType),
+		zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
+		zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
+	}
+
+	var timestamp int64
+	switch changeType {
+	case ResourceAdd:
+		timestamp = node.GetCreationTimestamp().UnixNano() / 1e6
+	case ResourceDelete:
+		timestamp = node.GetDeletionTimestamp().UnixNano() / 1e6
+		fields[zenossEntityDeletedField] = valueFromBool(true)
+	default:
+		timestamp = time.Now().UnixNano() / 1e6
+	}
 
 	w.publisher.AddModel(&zenoss.Model{
-		Timestamp: node.GetCreationTimestamp().UnixNano() / 1e6,
-		Dimensions: map[string]string{
-			"k8s.cluster": clusterName,
-			"k8s.node":    nodeName,
-		},
-		MetadataFields: &structpb.Struct{
-			Fields: map[string]*structpb.Value{
-				zenossNameField:         valueFromString(nodeName),
-				zenossTypeField:         valueFromString(zenossK8sNodeType),
-				zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
-				zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
-			},
-		},
+		Timestamp:      timestamp,
+		Dimensions:     dimensions,
+		MetadataFields: &structpb.Struct{Fields: fields},
 	})
 }
 
-func (w *Watcher) addNamespace(namespace *core_v1.Namespace) {
+func (w *Watcher) handleNamespace(namespace *core_v1.Namespace, changeType ResourceChangeType) {
 	namespaceName := namespace.GetName()
-	sourceTags := []string{getNamespaceTag(clusterName, namespaceName)}
-	sinkTags := []string{getClusterTag(clusterName)}
+	namespaceTag := getNamespaceTag(clusterName, namespaceName)
+	sourceTags := []string{namespaceTag}
+	sinkTags := []string{namespaceTag, getClusterTag(clusterName)}
 
-	log.WithFields(log.Fields{
-		"namespace": namespaceName,
-	}).Info("add namespace")
+	dimensions := map[string]string{
+		zenossK8sClusterType:   clusterName,
+		zenossK8sNamespaceType: namespaceName,
+	}
+
+	fields := map[string]*structpb.Value{
+		zenossNameField:         valueFromString(namespaceName),
+		zenossTypeField:         valueFromString(zenossK8sNamespaceType),
+		zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
+		zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
+	}
+
+	var timestamp int64
+	switch changeType {
+	case ResourceAdd:
+		timestamp = namespace.GetCreationTimestamp().UnixNano() / 1e6
+	case ResourceDelete:
+		timestamp = namespace.GetDeletionTimestamp().UnixNano() / 1e6
+		fields[zenossEntityDeletedField] = valueFromBool(true)
+	default:
+		timestamp = time.Now().UnixNano() / 1e6
+	}
 
 	w.publisher.AddModel(&zenoss.Model{
-		Timestamp: namespace.GetCreationTimestamp().UnixNano() / 1e6,
-		Dimensions: map[string]string{
-			"k8s.cluster":   clusterName,
-			"k8s.namespace": namespaceName,
-		},
-		MetadataFields: &structpb.Struct{
-			Fields: map[string]*structpb.Value{
-				zenossNameField:         valueFromString(namespaceName),
-				zenossTypeField:         valueFromString(zenossK8sNamespaceType),
-				zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
-				zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
-			},
-		},
+		Timestamp:      timestamp,
+		Dimensions:     dimensions,
+		MetadataFields: &structpb.Struct{Fields: fields},
 	})
 }
 
-func (w *Watcher) addDeployment(deployment *apps_v1beta1.Deployment) {
-	deploymentName := deployment.GetName()
-	namespace := deployment.GetNamespace()
-	sourceTags := []string{getDeploymentTag(clusterName, namespace, deploymentName)}
-	sinkTags := []string{getNamespaceTag(clusterName, namespace)}
-
-	log.WithFields(log.Fields{
-		"namespace":  namespace,
-		"deployment": deploymentName,
-	}).Info("add deployment")
-
-	w.publisher.AddModel(&zenoss.Model{
-		Timestamp: deployment.GetCreationTimestamp().UnixNano() / 1e6,
-		Dimensions: map[string]string{
-			"k8s.cluster":    clusterName,
-			"k8s.namespace":  namespace,
-			"k8s.deployment": deploymentName,
-		},
-		MetadataFields: &structpb.Struct{
-			Fields: map[string]*structpb.Value{
-				zenossNameField:         valueFromString(deploymentName),
-				zenossTypeField:         valueFromString(zenossK8sDeploymentType),
-				zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
-				zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
-			},
-		},
-	})
-}
-
-func (w *Watcher) addPod(pod *core_v1.Pod) {
+func (w *Watcher) handlePod(pod *core_v1.Pod, changeType ResourceChangeType) {
 	podName := pod.GetName()
 	namespace := pod.GetNamespace()
-	sourceTags := []string{getPodTag(clusterName, namespace, podName)}
-	sinkTags := []string{getNamespaceTag(clusterName, namespace)}
+	podTag := getPodTag(clusterName, namespace, podName)
+	sourceTags := []string{podTag}
+	sinkTags := []string{podTag, getNamespaceTag(clusterName, namespace)}
 
 	if pod.Spec.NodeName != "" {
 		sinkTags = append(sinkTags, getNodeTag(clusterName, pod.Spec.NodeName))
 	}
 
-	log.WithFields(log.Fields{
-		"namespace": namespace,
-		"node":      pod.Spec.NodeName,
-		"pod":       podName,
-	}).Info("add pod")
+	dimensions := map[string]string{
+		"k8s.cluster":   clusterName,
+		"k8s.namespace": namespace,
+		"k8s.pod":       podName,
+	}
+
+	fields := map[string]*structpb.Value{
+		zenossNameField:         valueFromString(podName),
+		zenossTypeField:         valueFromString(zenossK8sPodType),
+		zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
+		zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
+	}
+
+	var timestamp int64
+	switch changeType {
+	case ResourceAdd:
+		timestamp = pod.GetCreationTimestamp().UnixNano() / 1e6
+	case ResourceDelete:
+		timestamp = pod.GetDeletionTimestamp().UnixNano() / 1e6
+		fields[zenossEntityDeletedField] = valueFromBool(true)
+	default:
+		timestamp = time.Now().UnixNano() / 1e6
+	}
 
 	w.publisher.AddModel(&zenoss.Model{
-		Timestamp: pod.GetCreationTimestamp().UnixNano() / 1e6,
-		Dimensions: map[string]string{
-			"k8s.cluster":   clusterName,
-			"k8s.namespace": namespace,
-			"k8s.pod":       podName,
-		},
-		MetadataFields: &structpb.Struct{
-			Fields: map[string]*structpb.Value{
-				zenossNameField:         valueFromString(podName),
-				zenossTypeField:         valueFromString(zenossK8sPodType),
-				zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
-				zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
-			},
-		},
+		Timestamp:      timestamp,
+		Dimensions:     dimensions,
+		MetadataFields: &structpb.Struct{Fields: fields},
 	})
-}
-
-// OnUpdate TODO
-func (w *Watcher) OnUpdate(old interface{}, new interface{}) {
-	mold := old.(meta_v1.Object)
-	mnew := new.(meta_v1.Object)
-	log.WithFields(log.Fields{
-		"oldName": mold.GetName(),
-		"newName": mnew.GetName(),
-	}).Debug("!!! genericResourceEventHandler.OnUpdate")
-}
-
-// OnDelete TODO
-func (w *Watcher) OnDelete(obj interface{}) {
-	mobj := obj.(meta_v1.Object)
-	log.WithFields(log.Fields{
-		"name": mobj.GetName(),
-	}).Debug("!!! genericResourceEventHandler.OnDelete")
 }

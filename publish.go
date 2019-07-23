@@ -66,32 +66,43 @@ func (p *Publisher) Start(ctx context.Context) {
 		}(worker)
 	}
 
-	// Batch metrics and models.
+	// Batch models and metrics for the workers to publish.
 	metrics := make([]*zenoss.Metric, 0, metricsPerBatch)
+	metricsRate := time.Tick(time.Second)
+
 	models := make([]*zenoss.Model, 0, modelsPerBatch)
+	modelsRate := time.Tick(time.Minute)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
+
+		// Create a batch if we have enough metrics to fill it.
 		case metric := <-p.metricQueue:
 			metrics = append(metrics, metric)
 			if len(metrics) >= metricsPerBatch {
 				metricBatchQueue <- metrics
 				metrics = make([]*zenoss.Metric, 0, metricsPerBatch)
 			}
+
+		// Create an undersized batch if we haven't recently.
+		case <-metricsRate:
+			if len(metrics) > 0 {
+				metricBatchQueue <- metrics
+				metrics = make([]*zenoss.Metric, 0, metricsPerBatch)
+			}
+
+		// Create a batch if we have enough models to fill it.
 		case model := <-p.modelQueue:
 			models = append(models, model)
 			if len(models) >= modelsPerBatch {
 				modelBatchQueue <- models
 				models = make([]*zenoss.Model, 0, modelsPerBatch)
 			}
-		case <-time.After(time.Second):
-			if len(metrics) > 0 {
-				metricBatchQueue <- metrics
-				metrics = make([]*zenoss.Metric, 0, metricsPerBatch)
-			}
 
+		// Create an undersized batch if we haven't recently.
+		case <-modelsRate:
 			if len(models) > 0 {
 				modelBatchQueue <- models
 				models = make([]*zenoss.Model, 0, modelsPerBatch)
@@ -251,6 +262,14 @@ func publishModelsToEndpoint(ctx context.Context, client zenoss.DataReceiverServ
 		}
 
 		logFunc("sent models")
+	}
+}
+
+func valueFromBool(b bool) *structpb.Value {
+	return &structpb.Value{
+		Kind: &structpb.Value_BoolValue{
+			BoolValue: b,
+		},
 	}
 }
 

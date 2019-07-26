@@ -33,7 +33,7 @@ const (
 	paramZenossAddress = "ZENOSS_ADDRESS"
 	paramZenossAPIKey  = "ZENOSS_API_KEY"
 
-	defaultZenossName    = "zenoss"
+	defaultZenossName    = "default"
 	defaultZenossAddress = "api.zenoss.io:443"
 
 	metricsAPI = "apis/metrics.k8s.io/v1beta1"
@@ -48,10 +48,10 @@ const (
 
 	zenossSourceType = "zenoss.agent.kubernetes"
 
-	zenossK8sClusterType    = "k8s.cluster"
-	zenossK8sNodeType       = "k8s.node"
-	zenossK8sNamespaceType  = "k8s.namespace"
-	zenossK8sPodType        = "k8s.pod"
+	zenossK8sClusterType   = "k8s.cluster"
+	zenossK8sNodeType      = "k8s.node"
+	zenossK8sNamespaceType = "k8s.namespace"
+	zenossK8sPodType       = "k8s.pod"
 
 	// TODO: Make these configurable?
 	collectionInterval = time.Minute

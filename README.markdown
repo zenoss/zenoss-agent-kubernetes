@@ -9,9 +9,9 @@ Contents:
   - [Kubernetes: Multi-Cluster View](#kubernetes-multi-cluster-view)
   - [Kubernetes: Single Cluster View](#kubernetes-single-cluster-view)
 - [Deployment](#deployment)
-  - [Updating the Agent](#updating-the-agent)
-  - [Removing the Agent](#removing-the-agent)
-  - [Configuration](#configuration)
+  - [Deploying with kubectl](#deploying-with-kubectl)
+  - [Deploying with Helm](#deploying-with-helm)
+- [Configuration](#configuration)
 - [Data](#data)
   - [Cluster](#cluster)
   - [Node](#node)
@@ -204,9 +204,14 @@ The tiles for this dashboard are configured as follows.
 ## Deployment
 
 The agent is intended to be deployed within the Kubernetes cluster it will be
-monitoring. There are many ways to deploy resources into a Kubernetes cluster.
+monitoring. The following sections document how to deploy the agent to a
+cluster either via the native `kubectl` tool, or with [Helm](https://helm.sh/).
+
+There are many ways to deploy resources into a Kubernetes cluster.
 The following steps should be adaptable to your chosen method of deploying
 resources.
+
+### Deploying with kubectl
 
 1. Ensure your `kubectl` is configured to use the correct context.
 
@@ -305,7 +310,7 @@ resources.
     kubectl apply -f zenoss-agent-kubernetes.yml
     ```
 
-### Updating the Agent
+#### Updating the Agent
 
 To reconfigure the resources you would edit `zenoss-agent-kubernetes.yml` then
 run the following command. Kubernetes will identify what was changed from the
@@ -315,7 +320,7 @@ last time you applied the template, and affect just those changes.
 kubectl apply -f zenoss-agent-kubernetes.yml
 ```
 
-### Removing the Agent
+#### Removing the Agent
 
 To remove all of the resources you run the following command.
 
@@ -323,7 +328,33 @@ To remove all of the resources you run the following command.
 kubectl delete -f zenoss-agent-kubernetes.yml
 ```
 
-### Configuration
+### Deploying with Helm
+
+You must first have [Helm] running on your cluster. See the
+[Helm Quickstart Guide] for more information on getting started with Helm.
+
+The following example installs the agent with the minimum required
+configuration. Replace `<K8S_CLUSTER_NAME>` with a unique name for the cluster.
+This is the name the cluster will be identified as in Zenoss. Replace
+`<ZENOSS_API_KEY>` with a Zenoss API key.
+
+```bash
+$ helm repo add zenoss https://zenoss.github.io/charts/
+$ helm install zenoss/zenoss-agent-kubernetes \
+    --name my-release \
+    --set zenoss.clusterName=<K8S_CLUSTER_NAME> \
+    --set zenoss.apiKey=<ZENOSS_API_KEY>
+```
+
+This command deploys zenoss-agent-kubernetes on the Kubernetes cluster in the
+default configuration. See the [zenoss-agent-kubernetes chart] documentation for
+additional configuration options that are available.
+
+[Helm]: https://helm.sh/
+[Helm Quickstart Guide]: https://helm.sh/docs/using_helm/#quickstart
+[zenoss-agent-kubernetes chart]: https://github.com/zenoss/charts/tree/master/zenoss-agent-kubernetes
+
+## Configuration
 
 The agent is configured with the following environment variables.
 

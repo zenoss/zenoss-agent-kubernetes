@@ -52,6 +52,7 @@ const (
 	zenossK8sNodeType      = "k8s.node"
 	zenossK8sNamespaceType = "k8s.namespace"
 	zenossK8sPodType       = "k8s.pod"
+	zenossK8sContainerType = "k8s.container"
 
 	// TODO: Make these configurable?
 	collectionInterval = time.Minute

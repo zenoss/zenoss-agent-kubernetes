@@ -17,6 +17,7 @@ Contents:
   - [Node](#node)
   - [Namespace](#namespace)
   - [Pod](#pod)
+  - [Container](#container)
 
 ## Dashboards
 
@@ -433,10 +434,11 @@ in the cluster.
 
 ### Node
 
-The agent will send a node model to Zenoss each time receives node information
-from the Kubernetes API. Specifically this is the `/api/v1/watch/nodes` API
-endpoint. The agent will receive information about all nodes when it starts, and
-again for each node anytime the node's properties change.
+The agent will send a node model to Zenoss each time it receives node
+information from the Kubernetes API. Specifically this is the
+`/api/v1/watch/nodes` API endpoint. The agent will receive information about all
+nodes when it starts, and again for each node anytime the node's properties
+change.
 
 #### Node Dimensions
 
@@ -465,7 +467,7 @@ Node CPU and memory metrics are those directly reported for the node.
 
 ### Namespace
 
-The agent will send a namespace model to Zenoss each time receives namespace
+The agent will send a namespace model to Zenoss each time it receives namespace
 information from the Kubernetes API. Specifically this is the
 `/api/v1/watch/namespaces` API endpoint. The agent will receive information
 about all namespaces when it starts, and again for each namespace anytime the
@@ -501,10 +503,10 @@ containers in the namespace.
 
 ### Pod
 
-The agent will send a pod model to Zenoss each time receives pod information
+The agent will send a pod model to Zenoss each time it receives pod information
 from the Kubernetes API. Specifically this is the `/api/v1/watch/pods` API
-endpoint. The agent will receive information about all namespaces when it
-starts, and again for each pod anytime the pod's properties change.
+endpoint. The agent will receive information about all pods when it starts, and
+again for each pod anytime the pod's properties change.
 
 #### Pod Dimensions
 
@@ -529,7 +531,42 @@ starts, and again for each pod anytime the pod's properties change.
 | -------------------------- | ----- | ------------ |
 | `k8s.pod.containers.total` | GAUGE | containers   |
 | `k8s.pod.cpu.ms`*          | GAUGE | milliseconds |
-| `k8s.pod.memory.bytes`*    | bytes | bytes        |
+| `k8s.pod.memory.bytes`*    | GAUGE | bytes        |
 
-\* Pod CPU and memory metrics are a sum of the same metrics for all containers in
-the pod.
+\* Pod CPU and memory metrics are a sum of the same metrics for all containers
+in the pod.
+
+### Container
+
+The agent will send container models to Zenoss each time it receives pod
+information from the Kubernetes API. Specifically this is the
+`/api/v1/watch/pods` API endpoint. The agent will receive information about all
+pods (and their containers) when it starts, and again for each container anytime
+the container's pod's properties change.
+
+#### Container Dimensions
+
+| Dimension       | Value             |
+| --------------- | ----------------- |
+| `k8s.cluster`   | `<clusterName>`   |
+| `k8s.namespace` | `<namespaceName>` |
+| `k8s.pod`       | `<podName>`       |
+| `k8s.container` | `<containerName>` |
+
+#### Container Metadata
+
+| Field                               | Value                                                                                                                                                                                  |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                              | `<containerName>`                                                                                                                                                                      |
+| `type`                              | `k8s.container`                                                                                                                                                                        |
+| `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>,k8s.container=<containerName>`, `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>` |
+| `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>,k8s.container=<containerName>`                                                                              |
+
+#### Pod Metrics
+
+| Metric Name                  | Type  | Units        |
+| ---------------------------- | ----- | ------------ |
+| `k8s.container.cpu.ms`       | GAUGE | milliseconds |
+| `k8s.container.memory.bytes` | GAUGE | bytes        |
+
+Node CPU and memory metrics are those directly reported for the container.

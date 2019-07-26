@@ -97,24 +97,30 @@ func getClusterTag(cluster string) string {
 
 func getNodeTag(cluster, node string) string {
 	return fmt.Sprintf(
-		"%s=%s,%s=%s",
-		zenossK8sClusterType, cluster,
+		"%s,%s=%s",
+		getClusterTag(cluster),
 		zenossK8sNodeType, node)
 }
 
 func getNamespaceTag(cluster, namespace string) string {
 	return fmt.Sprintf(
-		"%s=%s,%s=%s",
-		zenossK8sClusterType, cluster,
+		"%s,%s=%s",
+		getClusterTag(cluster),
 		zenossK8sNamespaceType, namespace)
 }
 
 func getPodTag(cluster, namespace, pod string) string {
 	return fmt.Sprintf(
-		"%s=%s,%s=%s,%s=%s",
-		zenossK8sClusterType, cluster,
-		zenossK8sNamespaceType, namespace,
+		"%s,%s=%s",
+		getNamespaceTag(cluster, namespace),
 		zenossK8sPodType, pod)
+}
+
+func getContainerTag(cluster, namespace, pod, container string) string {
+	return fmt.Sprintf(
+		"%s,%s=%s",
+		getPodTag(cluster, namespace, pod),
+		zenossK8sContainerType, container)
 }
 
 func (w *Watcher) addCluster() {
@@ -223,9 +229,9 @@ func (w *Watcher) handlePod(pod *core_v1.Pod, changeType ResourceChangeType) {
 	}
 
 	dimensions := map[string]string{
-		"k8s.cluster":   clusterName,
-		"k8s.namespace": namespace,
-		"k8s.pod":       podName,
+		zenossK8sClusterType:   clusterName,
+		zenossK8sNamespaceType: namespace,
+		zenossK8sPodType:       podName,
 	}
 
 	fields := map[string]*structpb.Value{
@@ -251,4 +257,31 @@ func (w *Watcher) handlePod(pod *core_v1.Pod, changeType ResourceChangeType) {
 		Dimensions:     dimensions,
 		MetadataFields: &structpb.Struct{Fields: fields},
 	})
+
+	for _, container := range pod.Spec.Containers {
+		containerName := container.Name
+		containerTag := getContainerTag(clusterName, namespace, podName, containerName)
+		sourceTags := []string{containerTag, podTag}
+		sinkTags := []string{containerTag}
+
+		dimensions := map[string]string{
+			zenossK8sClusterType:   clusterName,
+			zenossK8sNamespaceType: namespace,
+			zenossK8sPodType:       podName,
+			zenossK8sContainerType: containerName,
+		}
+
+		fields := map[string]*structpb.Value{
+			zenossNameField:         valueFromString(containerName),
+			zenossTypeField:         valueFromString(zenossK8sContainerType),
+			zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
+			zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
+		}
+
+		w.publisher.AddModel(&zenoss.Model{
+			Timestamp:      timestamp,
+			Dimensions:     dimensions,
+			MetadataFields: &structpb.Struct{Fields: fields},
+		})
+	}
 }

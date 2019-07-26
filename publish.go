@@ -142,6 +142,7 @@ func (p *Publisher) AddModel(model *zenoss.Model) {
 	if model.Timestamp == 0 {
 		model.Timestamp = time.Now().UnixNano() / 1e6
 	}
+
 	if _, ok := model.MetadataFields.Fields[zenossSourceTypeField]; !ok {
 		model.MetadataFields.Fields[zenossSourceTypeField] = valueFromString(zenossSourceType)
 	}

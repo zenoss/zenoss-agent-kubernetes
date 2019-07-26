@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -135,25 +136,25 @@ func (c *Collector) collectPods(podMetricsListQueue chan<- metrics.PodMetricsLis
 
 func (c *Collector) processNodeMetricsList(nodeMetricsList metrics.NodeMetricsList) {
 	clusterDimensions := map[string]string{
-		"k8s.cluster": clusterName,
+		zenossK8sClusterType: clusterName,
 	}
 
 	for _, nodeMetrics := range nodeMetricsList.Items {
 		nodeTimestamp := nodeMetrics.Timestamp.UnixNano() / 1e6
 		nodeDimensions := map[string]string{
-			"k8s.cluster": clusterName,
-			"k8s.node":    nodeMetrics.ObjectMeta.Name,
+			zenossK8sClusterType: clusterName,
+			zenossK8sNodeType:    nodeMetrics.ObjectMeta.Name,
 		}
 
 		c.publisher.AddMetric(&zenoss.Metric{
-			Metric:     "k8s.node.cpu.ms",
+			Metric:     fmt.Sprintf("%s.cpu.ms", zenossK8sNodeType),
 			Dimensions: nodeDimensions,
 			Timestamp:  nodeTimestamp,
 			Value:      float64(nodeMetrics.Usage.Cpu().MilliValue()),
 		})
 
 		c.publisher.AddMetric(&zenoss.Metric{
-			Metric:     "k8s.node.memory.bytes",
+			Metric:     fmt.Sprintf("%s.memory.bytes", zenossK8sNodeType),
 			Dimensions: nodeDimensions,
 			Timestamp:  nodeTimestamp,
 			Value:      float64(nodeMetrics.Usage.Memory().Value()),
@@ -161,7 +162,7 @@ func (c *Collector) processNodeMetricsList(nodeMetricsList metrics.NodeMetricsLi
 	}
 
 	c.publisher.AddMetric(&zenoss.Metric{
-		Metric:     "k8s.cluster.nodes.total",
+		Metric:     fmt.Sprintf("%s.nodes.total", zenossK8sClusterType),
 		Dimensions: clusterDimensions,
 		Value:      float64(len(nodeMetricsList.Items)),
 	})
@@ -171,7 +172,7 @@ func (c *Collector) processPodMetricsList(podMetricsList metrics.PodMetricsList)
 	var clusterTimestamp int64
 
 	clusterDimensions := map[string]string{
-		"k8s.cluster": clusterName,
+		zenossK8sClusterType: clusterName,
 	}
 
 	type metricTotals struct {
@@ -193,9 +194,9 @@ func (c *Collector) processPodMetricsList(podMetricsList metrics.PodMetricsList)
 
 		podTimestamp := podMetrics.Timestamp.UnixNano() / 1e6
 		podDimensions := map[string]string{
-			"k8s.cluster":   clusterName,
-			"k8s.namespace": namespace,
-			"k8s.pod":       podMetrics.ObjectMeta.Name,
+			zenossK8sClusterType:   clusterName,
+			zenossK8sNamespaceType: namespace,
+			zenossK8sPodType:       podMetrics.ObjectMeta.Name,
 		}
 
 		if clusterTimestamp == 0 {
@@ -221,21 +222,21 @@ func (c *Collector) processPodMetricsList(podMetricsList metrics.PodMetricsList)
 			podTotals.memoryBytes += memoryBytes
 
 			containerDimensions := map[string]string{
-				"k8s.cluster":   clusterName,
-				"k8s.namespace": namespace,
-				"k8s.pod":       podMetrics.ObjectMeta.Name,
-				"k8s.container": containerMetrics.Name,
+				zenossK8sClusterType:   clusterName,
+				zenossK8sNamespaceType: namespace,
+				zenossK8sPodType:       podMetrics.ObjectMeta.Name,
+				zenossK8sContainerType: containerMetrics.Name,
 			}
 
 			c.publisher.AddMetric(&zenoss.Metric{
-				Metric:     "k8s.container.cpu.ms",
+				Metric:     fmt.Sprintf("%s.cpu.ms", zenossK8sContainerType),
 				Timestamp:  podTimestamp,
 				Value:      float64(cpuMillis),
 				Dimensions: containerDimensions,
 			})
 
 			c.publisher.AddMetric(&zenoss.Metric{
-				Metric:     "k8s.container.memory.bytes",
+				Metric:     fmt.Sprintf("%s.memory.bytes", zenossK8sContainerType),
 				Timestamp:  podTimestamp,
 				Value:      float64(memoryBytes),
 				Dimensions: containerDimensions,
@@ -243,21 +244,21 @@ func (c *Collector) processPodMetricsList(podMetricsList metrics.PodMetricsList)
 		}
 
 		c.publisher.AddMetric(&zenoss.Metric{
-			Metric:     "k8s.pod.containers.total",
+			Metric:     fmt.Sprintf("%s.containers.total", zenossK8sPodType),
 			Timestamp:  podTimestamp,
 			Value:      float64(podTotals.containers),
 			Dimensions: podDimensions,
 		})
 
 		c.publisher.AddMetric(&zenoss.Metric{
-			Metric:     "k8s.pod.cpu.ms",
+			Metric:     fmt.Sprintf("%s.cpu.ms", zenossK8sPodType),
 			Timestamp:  podTimestamp,
 			Value:      float64(podTotals.cpuMillis),
 			Dimensions: podDimensions,
 		})
 
 		c.publisher.AddMetric(&zenoss.Metric{
-			Metric:     "k8s.pod.memory.bytes",
+			Metric:     fmt.Sprintf("%s.memory.bytes", zenossK8sPodType),
 			Timestamp:  podTimestamp,
 			Value:      float64(podTotals.memoryBytes),
 			Dimensions: podDimensions,
@@ -268,33 +269,33 @@ func (c *Collector) processPodMetricsList(podMetricsList metrics.PodMetricsList)
 
 	for namespace, namespaceTotals := range totalsByNamespace {
 		namespaceDimensions := map[string]string{
-			"k8s.cluster":   clusterName,
-			"k8s.namespace": namespace,
+			zenossK8sClusterType:   clusterName,
+			zenossK8sNamespaceType: namespace,
 		}
 
 		c.publisher.AddMetric(&zenoss.Metric{
-			Metric:     "k8s.namespace.pods.total",
+			Metric:     fmt.Sprintf("%s.pods.total", zenossK8sNamespaceType),
 			Timestamp:  clusterTimestamp,
 			Value:      float64(namespaceTotals.pods),
 			Dimensions: namespaceDimensions,
 		})
 
 		c.publisher.AddMetric(&zenoss.Metric{
-			Metric:     "k8s.namespace.containers.total",
+			Metric:     fmt.Sprintf("%s.containers.total", zenossK8sNamespaceType),
 			Timestamp:  clusterTimestamp,
 			Value:      float64(namespaceTotals.containers),
 			Dimensions: namespaceDimensions,
 		})
 
 		c.publisher.AddMetric(&zenoss.Metric{
-			Metric:     "k8s.namespace.cpu.ms",
+			Metric:     fmt.Sprintf("%s.cpu.ms", zenossK8sNamespaceType),
 			Timestamp:  clusterTimestamp,
 			Value:      float64(namespaceTotals.cpuMillis),
 			Dimensions: namespaceDimensions,
 		})
 
 		c.publisher.AddMetric(&zenoss.Metric{
-			Metric:     "k8s.namespace.memory.bytes",
+			Metric:     fmt.Sprintf("%s.memory.bytes", zenossK8sNamespaceType),
 			Timestamp:  clusterTimestamp,
 			Value:      float64(namespaceTotals.memoryBytes),
 			Dimensions: namespaceDimensions,
@@ -302,28 +303,28 @@ func (c *Collector) processPodMetricsList(podMetricsList metrics.PodMetricsList)
 	}
 
 	c.publisher.AddMetric(&zenoss.Metric{
-		Metric:     "k8s.cluster.pods.total",
+		Metric:     fmt.Sprintf("%s.pods.total", zenossK8sClusterType),
 		Timestamp:  clusterTimestamp,
 		Value:      float64(clusterTotals.pods),
 		Dimensions: clusterDimensions,
 	})
 
 	c.publisher.AddMetric(&zenoss.Metric{
-		Metric:     "k8s.cluster.containers.total",
+		Metric:     fmt.Sprintf("%s.containers.total", zenossK8sClusterType),
 		Timestamp:  clusterTimestamp,
 		Value:      float64(clusterTotals.containers),
 		Dimensions: clusterDimensions,
 	})
 
 	c.publisher.AddMetric(&zenoss.Metric{
-		Metric:     "k8s.cluster.cpu.ms",
+		Metric:     fmt.Sprintf("%s.cpu.ms", zenossK8sClusterType),
 		Timestamp:  clusterTimestamp,
 		Value:      float64(clusterTotals.cpuMillis),
 		Dimensions: clusterDimensions,
 	})
 
 	c.publisher.AddMetric(&zenoss.Metric{
-		Metric:     "k8s.cluster.memory.bytes",
+		Metric:     fmt.Sprintf("%s.memory.bytes", zenossK8sClusterType),
 		Timestamp:  clusterTimestamp,
 		Value:      float64(clusterTotals.memoryBytes),
 		Dimensions: clusterDimensions,

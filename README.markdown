@@ -562,7 +562,7 @@ the container's pod's properties change.
 | `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>,k8s.container=<containerName>`, `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>` |
 | `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>,k8s.container=<containerName>`                                                                              |
 
-#### Pod Metrics
+#### Container Metrics
 
 | Metric Name                  | Type  | Units        |
 | ---------------------------- | ----- | ------------ |

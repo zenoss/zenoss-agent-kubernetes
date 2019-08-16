@@ -569,4 +569,4 @@ the container's pod's properties change.
 | `k8s.container.cpu.ms`       | GAUGE | milliseconds |
 | `k8s.container.memory.bytes` | GAUGE | bytes        |
 
-Node CPU and memory metrics are those directly reported for the container.
+Container CPU and memory metrics are those directly reported for the container.

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
 
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	zenoss "github.com/zenoss/zenoss-protobufs/go/cloud/data_receiver"
@@ -139,7 +138,6 @@ func (w *Watcher) addCluster() {
 	}
 
 	w.publisher.AddModel(&zenoss.Model{
-		Timestamp:      time.Now().UnixNano() / 1e6,
 		Dimensions:     dimensions,
 		MetadataFields: &structpb.Struct{Fields: fields},
 	})
@@ -163,19 +161,11 @@ func (w *Watcher) handleNode(node *core_v1.Node, changeType ResourceChangeType) 
 		zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
 	}
 
-	var timestamp int64
-	switch changeType {
-	case ResourceAdd:
-		timestamp = node.GetCreationTimestamp().UnixNano() / 1e6
-	case ResourceDelete:
-		timestamp = node.GetDeletionTimestamp().UnixNano() / 1e6
+	if changeType == ResourceDelete {
 		fields[zenossEntityDeletedField] = valueFromBool(true)
-	default:
-		timestamp = time.Now().UnixNano() / 1e6
 	}
 
 	w.publisher.AddModel(&zenoss.Model{
-		Timestamp:      timestamp,
 		Dimensions:     dimensions,
 		MetadataFields: &structpb.Struct{Fields: fields},
 	})
@@ -199,19 +189,11 @@ func (w *Watcher) handleNamespace(namespace *core_v1.Namespace, changeType Resou
 		zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
 	}
 
-	var timestamp int64
-	switch changeType {
-	case ResourceAdd:
-		timestamp = namespace.GetCreationTimestamp().UnixNano() / 1e6
-	case ResourceDelete:
-		timestamp = namespace.GetDeletionTimestamp().UnixNano() / 1e6
+	if changeType == ResourceDelete {
 		fields[zenossEntityDeletedField] = valueFromBool(true)
-	default:
-		timestamp = time.Now().UnixNano() / 1e6
 	}
 
 	w.publisher.AddModel(&zenoss.Model{
-		Timestamp:      timestamp,
 		Dimensions:     dimensions,
 		MetadataFields: &structpb.Struct{Fields: fields},
 	})
@@ -241,19 +223,11 @@ func (w *Watcher) handlePod(pod *core_v1.Pod, changeType ResourceChangeType) {
 		zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
 	}
 
-	var timestamp int64
-	switch changeType {
-	case ResourceAdd:
-		timestamp = pod.GetCreationTimestamp().UnixNano() / 1e6
-	case ResourceDelete:
-		timestamp = pod.GetDeletionTimestamp().UnixNano() / 1e6
+	if changeType == ResourceDelete {
 		fields[zenossEntityDeletedField] = valueFromBool(true)
-	default:
-		timestamp = time.Now().UnixNano() / 1e6
 	}
 
 	w.publisher.AddModel(&zenoss.Model{
-		Timestamp:      timestamp,
 		Dimensions:     dimensions,
 		MetadataFields: &structpb.Struct{Fields: fields},
 	})
@@ -278,8 +252,11 @@ func (w *Watcher) handlePod(pod *core_v1.Pod, changeType ResourceChangeType) {
 			zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
 		}
 
+		if changeType == ResourceDelete {
+			fields[zenossEntityDeletedField] = valueFromBool(true)
+		}
+
 		w.publisher.AddModel(&zenoss.Model{
-			Timestamp:      timestamp,
 			Dimensions:     dimensions,
 			MetadataFields: &structpb.Struct{Fields: fields},
 		})

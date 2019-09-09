@@ -231,7 +231,7 @@ resources.
     Be sure to replace `<API_KEY>` with your Zenoss API key.
 
     ```sh
-    kubectl create secret generic zenoss --from-literal=api-key=<API_KEY>
+    kubectl -n kube-system create secret generic zenoss --from-literal=api-key=<API_KEY>
     ```
 
 3. Create a `zenoss-agent-kubernetes.yml` file with the following contents.

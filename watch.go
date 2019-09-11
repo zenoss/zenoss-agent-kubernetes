@@ -146,8 +146,8 @@ func (w *Watcher) addCluster() {
 func (w *Watcher) handleNode(node *core_v1.Node, changeType ResourceChangeType) {
 	nodeName := node.GetName()
 	nodeTag := getNodeTag(clusterName, nodeName)
-	sourceTags := []string{nodeTag}
-	sinkTags := []string{nodeTag, getClusterTag(clusterName)}
+	sourceTags := []string{nodeTag, getClusterTag(clusterName)}
+	sinkTags := []string{nodeTag}
 
 	dimensions := map[string]string{
 		zenossK8sClusterType: clusterName,

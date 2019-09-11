@@ -453,8 +453,8 @@ change.
 | ----------------------------------- | ---------------------------------------------------------------------------- |
 | `name`                              | `<nodeName>`                                                                 |
 | `type`                              | `k8s.node`                                                                   |
-| `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>,k8s.node=<nodeName>`                              |
-| `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>,k8s.node=<nodeName>`, `k8s.cluster=<clusterName>` |
+| `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>,k8s.node=<nodeName>`, `k8s.cluster=<clusterName>` |
+| `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>,k8s.node=<nodeName>`                              |
 
 #### Node Metrics
 

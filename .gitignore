@@ -1,2 +1,4 @@
 /_*
 /.local
+/vendor
+/zenoss-agent-kubernetes

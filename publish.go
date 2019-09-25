@@ -14,6 +14,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/mitchellh/hashstructure"
 )
 
 // Publisher TODO
@@ -21,12 +23,14 @@ type Publisher struct {
 	clients     map[string]zenoss.DataReceiverServiceClient
 	metricQueue chan *zenoss.Metric
 	modelQueue  chan *zenoss.Model
+	hashCache   map[uint64]uint64
 }
 
 // NewPublisher TODO
 func NewPublisher() (*Publisher, error) {
 	metricQueue := make(chan *zenoss.Metric, metricsPerBatch)
 	modelQueue := make(chan *zenoss.Model, modelsPerBatch)
+	hashCache := make(map[uint64]uint64)
 
 	clients := make(map[string]zenoss.DataReceiverServiceClient, len(zenossEndpoints))
 	for name, endpoint := range zenossEndpoints {
@@ -42,6 +46,7 @@ func NewPublisher() (*Publisher, error) {
 		clients:     clients,
 		metricQueue: metricQueue,
 		modelQueue:  modelQueue,
+		hashCache:   hashCache,
 	}, nil
 }
 
@@ -95,10 +100,12 @@ func (p *Publisher) Start(ctx context.Context) {
 
 		// Create a batch if we have enough models to fill it.
 		case model := <-p.modelQueue:
-			models = append(models, model)
-			if len(models) >= modelsPerBatch {
-				modelBatchQueue <- models
-				models = make([]*zenoss.Model, 0, modelsPerBatch)
+			if p.isNewModel(model) {
+				models = append(models, model)
+				if len(models) >= modelsPerBatch {
+					modelBatchQueue <- models
+					models = make([]*zenoss.Model, 0, modelsPerBatch)
+				}
 			}
 
 		// Create an undersized batch if we haven't recently.
@@ -152,6 +159,37 @@ func (p *Publisher) AddModel(model *zenoss.Model) {
 	}
 
 	p.modelQueue <- model
+}
+
+func (p *Publisher) isNewModel(model *zenoss.Model) bool {
+	keyHash, err := hashstructure.Hash(model.Dimensions, nil)
+	if err != nil {
+		log.Warnf("failed to hash dimensions: %v", model.Dimensions)
+		return true
+	}
+
+	valueHash, err := hashstructure.Hash(model.MetadataFields, nil)
+	if err != nil {
+		log.Warnf("failed to hash metadata: %v", model.MetadataFields)
+		return true
+	}
+
+	if p.updateHashCache(keyHash, valueHash) {
+		return true
+	}
+
+	return false
+}
+
+func (p *Publisher) updateHashCache(key, value uint64) bool {
+	if oldValue, ok := p.hashCache[key]; ok {
+		if value == oldValue {
+			return false
+		}
+	}
+
+	p.hashCache[key] = value
+	return true
 }
 
 func (p *Publisher) getClient(name string) zenoss.DataReceiverServiceClient {

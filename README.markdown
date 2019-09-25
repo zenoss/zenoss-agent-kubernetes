@@ -9,6 +9,7 @@ Contents:
   - [Kubernetes: Multi-Cluster View](#kubernetes-multi-cluster-view)
   - [Kubernetes: Single Cluster View](#kubernetes-single-cluster-view)
 - [Deployment](#deployment)
+  - [Prerequisites](#prerequisites)
   - [Deploying with kubectl](#deploying-with-kubectl)
   - [Deploying with Helm](#deploying-with-helm)
 - [Configuration](#configuration)
@@ -211,6 +212,14 @@ cluster either via the native `kubectl` tool, or with [Helm](https://helm.sh/).
 There are many ways to deploy resources into a Kubernetes cluster.
 The following steps should be adaptable to your chosen method of deploying
 resources.
+
+### Prerequisites
+
+The Kubernetes Cluster must have the following prerequisites for the agent to
+function.
+
+1. Kubernetes 1.8+
+2. [Kubernetes Metrics Server](https://github.com/kubernetes-incubator/metrics-server)
 
 ### Deploying with kubectl
 

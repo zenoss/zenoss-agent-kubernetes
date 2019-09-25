@@ -53,7 +53,6 @@ func (w *Watcher) Start(ctx context.Context) {
 		w.factory.Core().V1().Nodes().Informer(),
 		w.factory.Core().V1().Namespaces().Informer(),
 		w.factory.Core().V1().Pods().Informer(),
-		w.factory.Apps().V1beta1().Deployments().Informer(),
 	}
 
 	for _, informer := range informers {

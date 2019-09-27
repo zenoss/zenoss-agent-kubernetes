@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	zenoss "github.com/zenoss/zenoss-protobufs/go/cloud/data_receiver"
+
 	"k8s.io/client-go/kubernetes"
 	metrics "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
@@ -16,11 +18,11 @@ import (
 // Collector TODO
 type Collector struct {
 	clientset *kubernetes.Clientset
-	publisher *Publisher
+	publisher Publisher
 }
 
 // NewCollector TODO
-func NewCollector(clientset *kubernetes.Clientset, publisher *Publisher) *Collector {
+func NewCollector(clientset *kubernetes.Clientset, publisher Publisher) *Collector {
 	return &Collector{
 		clientset: clientset,
 		publisher: publisher,
@@ -135,6 +137,7 @@ func (c *Collector) collectPods(podMetricsListQueue chan<- metrics.PodMetricsLis
 }
 
 func (c *Collector) processNodeMetricsList(nodeMetricsList metrics.NodeMetricsList) {
+	clusterTimestamp := int64(0)
 	clusterDimensions := map[string]string{
 		zenossK8sClusterType: clusterName,
 	}
@@ -144,6 +147,10 @@ func (c *Collector) processNodeMetricsList(nodeMetricsList metrics.NodeMetricsLi
 		nodeDimensions := map[string]string{
 			zenossK8sClusterType: clusterName,
 			zenossK8sNodeType:    nodeMetrics.ObjectMeta.Name,
+		}
+
+		if nodeTimestamp > clusterTimestamp {
+			clusterTimestamp = nodeTimestamp
 		}
 
 		c.publisher.AddMetric(&zenoss.Metric{
@@ -161,16 +168,20 @@ func (c *Collector) processNodeMetricsList(nodeMetricsList metrics.NodeMetricsLi
 		})
 	}
 
+	if clusterTimestamp == 0 {
+		clusterTimestamp = time.Now().UnixNano() / 1e6
+	}
+
 	c.publisher.AddMetric(&zenoss.Metric{
 		Metric:     fmt.Sprintf("%s.nodes.total", zenossK8sClusterType),
 		Dimensions: clusterDimensions,
+		Timestamp:  clusterTimestamp,
 		Value:      float64(len(nodeMetricsList.Items)),
 	})
 }
 
 func (c *Collector) processPodMetricsList(podMetricsList metrics.PodMetricsList) {
-	var clusterTimestamp int64
-
+	clusterTimestamp := int64(0)
 	clusterDimensions := map[string]string{
 		zenossK8sClusterType: clusterName,
 	}
@@ -199,7 +210,7 @@ func (c *Collector) processPodMetricsList(podMetricsList metrics.PodMetricsList)
 			zenossK8sPodType:       podMetrics.ObjectMeta.Name,
 		}
 
-		if clusterTimestamp == 0 {
+		if podTimestamp > clusterTimestamp {
 			clusterTimestamp = podTimestamp
 		}
 
@@ -267,7 +278,21 @@ func (c *Collector) processPodMetricsList(podMetricsList metrics.PodMetricsList)
 		totalsByNamespace[namespace] = namespaceTotals
 	}
 
-	for namespace, namespaceTotals := range totalsByNamespace {
+	// Sort namespaces so unit test won't sporadically fail.
+	sortedKeys := func(m map[string]metricTotals) []string {
+		keys := make([]string, len(m))
+		i := 0
+		for k := range m {
+			keys[i] = k
+			i++
+		}
+		sort.Strings(keys)
+		return keys
+	}
+
+	for _, namespace := range sortedKeys(totalsByNamespace) {
+		namespaceTotals := totalsByNamespace[namespace]
+
 		namespaceDimensions := map[string]string{
 			zenossK8sClusterType:   clusterName,
 			zenossK8sNamespaceType: namespace,
@@ -300,6 +325,10 @@ func (c *Collector) processPodMetricsList(podMetricsList metrics.PodMetricsList)
 			Value:      float64(namespaceTotals.memoryBytes),
 			Dimensions: namespaceDimensions,
 		})
+	}
+
+	if clusterTimestamp == 0 {
+		clusterTimestamp = time.Now().UnixNano() / 1e6
 	}
 
 	c.publisher.AddMetric(&zenoss.Metric{

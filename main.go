@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -88,7 +89,7 @@ func main() {
 	flag.Parse()
 
 	if *versionRequested {
-		printVersion()
+		fmt.Println(getVersion())
 		os.Exit(0)
 	}
 
@@ -128,7 +129,7 @@ func main() {
 		log.Fatalf("kubernetes error: %v", err)
 	}
 
-	publisher, err := NewPublisher()
+	publisher, err := NewZenossPublisher()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -157,18 +158,32 @@ func main() {
 	waitgroup.Wait()
 }
 
-func printVersion() {
+func getVersion() string {
+	lines := []string{}
+
 	if Version != "" {
-		fmt.Printf("Version:    %s\n", Version)
+		lines = append(
+			lines, fmt.Sprintf("%-11s %s", "Version:", Version))
 	}
+
 	if GitCommit != "" {
-		fmt.Printf("Git commit: %s\n", GitCommit)
+		lines = append(
+			lines, fmt.Sprintf("%-11s %s", "Git commit:", GitCommit))
 	}
+
 	if BuildTime != "" {
-		fmt.Printf("Built:      %s\n", BuildTime)
+		lines = append(
+			lines, fmt.Sprintf("%-11s %s", "Built:", BuildTime))
 	}
-	fmt.Printf("Go version: %s\n", runtime.Version())
-	fmt.Printf("OS/Arch:    %s/%s\n", runtime.GOOS, runtime.GOARCH)
+
+	lines = append(
+		lines, fmt.Sprintf("%-11s %s", "Go version:", runtime.Version()))
+
+	lines = append(
+		lines,
+		fmt.Sprintf("%-11s %s/%s", "OS/Arch:", runtime.GOOS, runtime.GOARCH))
+
+	return strings.Join(lines, "\n")
 }
 
 func loadConfiguration() error {
@@ -226,8 +241,6 @@ func loadConfiguration() error {
 			break
 		} else if zenossName == "" {
 			return fmt.Errorf("%s must be set", iParamZenossName)
-		} else if zenossAddress == "" {
-			return fmt.Errorf("%s must be set", iParamZenossAddress)
 		} else if zenossAPIKey == "" {
 			return fmt.Errorf("%s must be set", iParamZenossAPIKey)
 		} else if zenossEndpointNameMap[zenossName] {
@@ -268,7 +281,7 @@ func getKubernetesClientset() (*kubernetes.Clientset, error) {
 
 		kubeconfig := viper.GetString(paramKubeconfig)
 		if kubeconfig == "" {
-			return nil, fmt.Errorf("%s must be specified", paramKubeconfig)
+			return nil, fmt.Errorf("%s must be set", paramKubeconfig)
 		}
 
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)

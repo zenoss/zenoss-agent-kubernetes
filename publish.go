@@ -16,18 +16,27 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/mitchellh/hashstructure"
+
+	"github.com/zenoss/zenoss-agent-kubernetes/registry"
 )
 
 // Publisher TODO
-type Publisher struct {
+type Publisher interface {
+	Start(context.Context)
+	AddMetric(*zenoss.Metric)
+	AddModel(*zenoss.Model)
+}
+
+// ZenossPublisher TODO
+type ZenossPublisher struct {
 	clients     map[string]zenoss.DataReceiverServiceClient
 	metricQueue chan *zenoss.Metric
 	modelQueue  chan *zenoss.Model
 	hashCache   map[uint64]uint64
 }
 
-// NewPublisher TODO
-func NewPublisher() (*Publisher, error) {
+// NewZenossPublisher TODO
+func NewZenossPublisher() (*ZenossPublisher, error) {
 	metricQueue := make(chan *zenoss.Metric, metricsPerBatch)
 	modelQueue := make(chan *zenoss.Model, modelsPerBatch)
 	hashCache := make(map[uint64]uint64)
@@ -42,7 +51,7 @@ func NewPublisher() (*Publisher, error) {
 		clients[name] = client
 	}
 
-	return &Publisher{
+	return &ZenossPublisher{
 		clients:     clients,
 		metricQueue: metricQueue,
 		modelQueue:  modelQueue,
@@ -51,7 +60,7 @@ func NewPublisher() (*Publisher, error) {
 }
 
 // Start TODO
-func (p *Publisher) Start(ctx context.Context) {
+func (p *ZenossPublisher) Start(ctx context.Context) {
 	metricBatchQueue := make(chan []*zenoss.Metric, publishWorkers)
 	modelBatchQueue := make(chan []*zenoss.Model, publishWorkers)
 
@@ -73,10 +82,10 @@ func (p *Publisher) Start(ctx context.Context) {
 
 	// Batch models and metrics for the workers to publish.
 	metrics := make([]*zenoss.Metric, 0, metricsPerBatch)
-	metricsRate := time.Tick(time.Second)
+	metricBatchTick := registry.GetTick("metricBatchTick", time.Second)
 
 	models := make([]*zenoss.Model, 0, modelsPerBatch)
-	modelsRate := time.Tick(time.Minute)
+	modelBatchTick := registry.GetTick("modelBatchTick", time.Minute)
 
 	for {
 		select {
@@ -92,7 +101,7 @@ func (p *Publisher) Start(ctx context.Context) {
 			}
 
 		// Create an undersized batch if we haven't recently.
-		case <-metricsRate:
+		case <-metricBatchTick:
 			if len(metrics) > 0 {
 				metricBatchQueue <- metrics
 				metrics = make([]*zenoss.Metric, 0, metricsPerBatch)
@@ -109,7 +118,7 @@ func (p *Publisher) Start(ctx context.Context) {
 			}
 
 		// Create an undersized batch if we haven't recently.
-		case <-modelsRate:
+		case <-modelBatchTick:
 			if len(models) > 0 {
 				modelBatchQueue <- models
 				models = make([]*zenoss.Model, 0, modelsPerBatch)
@@ -119,7 +128,7 @@ func (p *Publisher) Start(ctx context.Context) {
 }
 
 // AddMetric TODO
-func (p *Publisher) AddMetric(metric *zenoss.Metric) {
+func (p *ZenossPublisher) AddMetric(metric *zenoss.Metric) {
 	if metric.Timestamp == 0 {
 		metric.Timestamp = time.Now().UnixNano() / 1e6
 	}
@@ -130,6 +139,11 @@ func (p *Publisher) AddMetric(metric *zenoss.Metric) {
 				zenossSourceTypeField: valueFromString(zenossSourceType),
 				zenossSourceField:     valueFromString(clusterName),
 			},
+		}
+	} else if metric.MetadataFields.Fields == nil {
+		metric.MetadataFields.Fields = map[string]*structpb.Value{
+			zenossSourceTypeField: valueFromString(zenossSourceType),
+			zenossSourceField:     valueFromString(clusterName),
 		}
 	} else {
 		if _, ok := metric.MetadataFields.Fields[zenossSourceTypeField]; !ok {
@@ -145,23 +159,37 @@ func (p *Publisher) AddMetric(metric *zenoss.Metric) {
 }
 
 // AddModel TODO
-func (p *Publisher) AddModel(model *zenoss.Model) {
+func (p *ZenossPublisher) AddModel(model *zenoss.Model) {
 	if model.Timestamp == 0 {
 		model.Timestamp = time.Now().UnixNano() / 1e6
 	}
 
-	if _, ok := model.MetadataFields.Fields[zenossSourceTypeField]; !ok {
-		model.MetadataFields.Fields[zenossSourceTypeField] = valueFromString(zenossSourceType)
-	}
+	if model.MetadataFields == nil {
+		model.MetadataFields = &structpb.Struct{
+			Fields: map[string]*structpb.Value{
+				zenossSourceTypeField: valueFromString(zenossSourceType),
+				zenossSourceField:     valueFromString(clusterName),
+			},
+		}
+	} else if model.MetadataFields.Fields == nil {
+		model.MetadataFields.Fields = map[string]*structpb.Value{
+			zenossSourceTypeField: valueFromString(zenossSourceType),
+			zenossSourceField:     valueFromString(clusterName),
+		}
+	} else {
+		if _, ok := model.MetadataFields.Fields[zenossSourceTypeField]; !ok {
+			model.MetadataFields.Fields[zenossSourceTypeField] = valueFromString(zenossSourceType)
+		}
 
-	if _, ok := model.MetadataFields.Fields[zenossSourceField]; !ok {
-		model.MetadataFields.Fields[zenossSourceField] = valueFromString(clusterName)
+		if _, ok := model.MetadataFields.Fields[zenossSourceField]; !ok {
+			model.MetadataFields.Fields[zenossSourceField] = valueFromString(clusterName)
+		}
 	}
 
 	p.modelQueue <- model
 }
 
-func (p *Publisher) isNewModel(model *zenoss.Model) bool {
+func (p *ZenossPublisher) isNewModel(model *zenoss.Model) bool {
 	keyHash, err := hashstructure.Hash(model.Dimensions, nil)
 	if err != nil {
 		log.Warnf("failed to hash dimensions: %v", model.Dimensions)
@@ -181,7 +209,7 @@ func (p *Publisher) isNewModel(model *zenoss.Model) bool {
 	return false
 }
 
-func (p *Publisher) updateHashCache(key, value uint64) bool {
+func (p *ZenossPublisher) updateHashCache(key, value uint64) bool {
 	if oldValue, ok := p.hashCache[key]; ok {
 		if value == oldValue {
 			return false
@@ -192,11 +220,11 @@ func (p *Publisher) updateHashCache(key, value uint64) bool {
 	return true
 }
 
-func (p *Publisher) getClient(name string) zenoss.DataReceiverServiceClient {
+func (p *ZenossPublisher) getClient(name string) zenoss.DataReceiverServiceClient {
 	return p.clients[name]
 }
 
-func (p *Publisher) publishMetrics(ctx context.Context, worker int, metrics []*zenoss.Metric) {
+func (p *ZenossPublisher) publishMetrics(ctx context.Context, worker int, metrics []*zenoss.Metric) {
 	workerLog := log.WithFields(log.Fields{"worker": worker})
 
 	var waitgroup sync.WaitGroup
@@ -250,7 +278,7 @@ func publishMetricsToEndpoint(ctx context.Context, client zenoss.DataReceiverSer
 	}
 }
 
-func (p *Publisher) publishModels(ctx context.Context, worker int, models []*zenoss.Model) {
+func (p *ZenossPublisher) publishModels(ctx context.Context, worker int, models []*zenoss.Model) {
 	workerLog := log.WithFields(log.Fields{"worker": worker})
 
 	var waitgroup sync.WaitGroup

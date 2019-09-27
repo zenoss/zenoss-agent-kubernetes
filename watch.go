@@ -30,11 +30,11 @@ const (
 // Watcher TODO
 type Watcher struct {
 	factory   informers.SharedInformerFactory
-	publisher *Publisher
+	publisher Publisher
 }
 
 // NewWatcher TODO
-func NewWatcher(clientset *kubernetes.Clientset, publisher *Publisher) *Watcher {
+func NewWatcher(clientset *kubernetes.Clientset, publisher Publisher) *Watcher {
 	return &Watcher{
 		factory:   informers.NewSharedInformerFactory(clientset, 0),
 		publisher: publisher,

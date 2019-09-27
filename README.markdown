@@ -19,6 +19,7 @@ Contents:
   - [Namespace](#namespace)
   - [Pod](#pod)
   - [Container](#container)
+- [Related Entities](#related-entities)
 
 ## Dashboards
 
@@ -579,3 +580,19 @@ the container's pod's properties change.
 | `k8s.container.memory.bytes` | GAUGE | bytes        |
 
 Container CPU and memory metrics are those directly reported for the container.
+
+## Related Entities
+
+The _simpleCustomRelationshipSourceTag_ and _simpleCustomRelationshipSinkTag_
+metadata fields described in [Data](#data) are sent to Zenoss to create
+relationships between entities. These relationships can be seen in the Zenoss
+_Smart View_ as _Related Entities_.
+
+Specifically you should expect to see the following related entities for each
+type of entity published to Zenoss by this agent.
+
+- Cluster: Nodes in the cluster.
+- Node: No related entities.
+- Namespace: Cluster, and nodes in the cluster by extension.
+- Pod: Containers, namespace, and cluster and nodes in the cluster by extension.
+- Container: No related entities.

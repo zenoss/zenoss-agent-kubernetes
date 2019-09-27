@@ -18,15 +18,14 @@ RUN go mod download
 
 # Build binary.
 COPY . .
+ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 RUN VERSION=$(git describe --all --exact-match `git rev-parse HEAD` | grep tags | sed 's/tags\///') \
     GIT_COMMIT=$(git rev-list -1 HEAD) \
     BUILD_TIME=$(date -u) \
-    CGO_ENABLED=0 \
-    GOOS=linux \
-    GOARCH=amd64 \
     go build -a --installsuffix cgo \
         -ldflags="-w -s -X main.Version=$VERSION -X main.GitCommit=$GIT_COMMIT -X \"main.BuildTime=$BUILD_TIME\"" \
-        -o /zenoss-agent-kubernetes
+        -o /zenoss-agent-kubernetes && \
+    go test -timeout 30s -cover ./...
 
 # Build minimal image.
 FROM scratch

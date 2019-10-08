@@ -372,8 +372,9 @@ The agent is configured with the following environment variables.
 | Environment    | Default             | Required | Description             |
 | -------------- | ------------------- | -------- | ----------------------- |
 | CLUSTER_NAME   |                     | yes      | Kubernetes cluster name |
-| ZENOSS_ADDRESS | `api.zenoss.io:443` | yes      | Zenoss API address      |
 | ZENOSS_API_KEY |                     | yes      | Zenoss API key          |
+| ZENOSS_ADDRESS | `api.zenoss.io:443` | no       | Zenoss API address      |
+| ZENOSS_NAME    | `default`           | no       | Name for API endpoint   |
 
 It is also possible to configure the agent to send the same data to multiple
 Zenoss endpoints. This isn't commonly done, but could potentially be useful if
@@ -382,12 +383,12 @@ you'd like to send the same data to separate tenants.
 To send data to multiple Zenoss endpoints you would set the following
 environment variables instead of ZENOSS_ADDRESS and ZENOSS_API_KEY.
 
-- ZENOSS1_NAME
-- ZENOSS1_ADDRESS
 - ZENOSS1_API_KEY
-- ZENOSS2_NAME
-- ZENOSS2_ADDRESS
+- ZENOSS1_ADDRESS
+- ZENOSS1_NAME
 - ZENOSS2_API_KEY
+- ZENOSS2_ADDRESS
+- ZENOSS2_NAME
 - etc.
 
 You can configure up to 9 (ZENOSS9_*) endpoints this way. The ZENOSS*_NAME

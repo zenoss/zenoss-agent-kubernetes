@@ -122,18 +122,13 @@ func getContainerTag(cluster, namespace, pod, container string) string {
 }
 
 func (w *Watcher) addCluster() {
-	sourceTags := []string{getClusterTag(clusterName)}
-	sinkTags := []string{getClusterTag(clusterName)}
-
 	dimensions := map[string]string{
 		zenossK8sClusterType: clusterName,
 	}
 
 	fields := map[string]*structpb.Value{
-		zenossNameField:         valueFromString(clusterName),
-		zenossTypeField:         valueFromString(zenossK8sClusterType),
-		zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
-		zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
+		zenossNameField: valueFromString(clusterName),
+		zenossTypeField: valueFromString(zenossK8sClusterType),
 	}
 
 	w.publisher.AddModel(&zenoss.Model{
@@ -144,9 +139,7 @@ func (w *Watcher) addCluster() {
 
 func (w *Watcher) handleNode(node *core_v1.Node, changeType ResourceChangeType) {
 	nodeName := node.GetName()
-	nodeTag := getNodeTag(clusterName, nodeName)
-	sourceTags := []string{nodeTag, getClusterTag(clusterName)}
-	sinkTags := []string{nodeTag}
+	impactTo := []string{getClusterTag(clusterName)}
 
 	dimensions := map[string]string{
 		zenossK8sClusterType: clusterName,
@@ -154,10 +147,9 @@ func (w *Watcher) handleNode(node *core_v1.Node, changeType ResourceChangeType) 
 	}
 
 	fields := map[string]*structpb.Value{
-		zenossNameField:         valueFromString(nodeName),
-		zenossTypeField:         valueFromString(zenossK8sNodeType),
-		zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
-		zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
+		zenossNameField:     valueFromString(nodeName),
+		zenossTypeField:     valueFromString(zenossK8sNodeType),
+		zenossImpactToField: valueFromStringSlice(impactTo),
 	}
 
 	if changeType == ResourceDelete {
@@ -172,9 +164,7 @@ func (w *Watcher) handleNode(node *core_v1.Node, changeType ResourceChangeType) 
 
 func (w *Watcher) handleNamespace(namespace *core_v1.Namespace, changeType ResourceChangeType) {
 	namespaceName := namespace.GetName()
-	namespaceTag := getNamespaceTag(clusterName, namespaceName)
-	sourceTags := []string{namespaceTag}
-	sinkTags := []string{namespaceTag, getClusterTag(clusterName)}
+	impactFrom := []string{getClusterTag(clusterName)}
 
 	dimensions := map[string]string{
 		zenossK8sClusterType:   clusterName,
@@ -182,10 +172,9 @@ func (w *Watcher) handleNamespace(namespace *core_v1.Namespace, changeType Resou
 	}
 
 	fields := map[string]*structpb.Value{
-		zenossNameField:         valueFromString(namespaceName),
-		zenossTypeField:         valueFromString(zenossK8sNamespaceType),
-		zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
-		zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
+		zenossNameField:       valueFromString(namespaceName),
+		zenossTypeField:       valueFromString(zenossK8sNamespaceType),
+		zenossImpactFromField: valueFromStringSlice(impactFrom),
 	}
 
 	if changeType == ResourceDelete {
@@ -201,12 +190,11 @@ func (w *Watcher) handleNamespace(namespace *core_v1.Namespace, changeType Resou
 func (w *Watcher) handlePod(pod *core_v1.Pod, changeType ResourceChangeType) {
 	podName := pod.GetName()
 	namespace := pod.GetNamespace()
-	podTag := getPodTag(clusterName, namespace, podName)
-	sourceTags := []string{podTag}
-	sinkTags := []string{podTag, getNamespaceTag(clusterName, namespace)}
+	impactFrom := []string{getNamespaceTag(clusterName, namespace)}
 
 	if pod.Spec.NodeName != "" {
-		sinkTags = append(sinkTags, getNodeTag(clusterName, pod.Spec.NodeName))
+		nodeTag := getNodeTag(clusterName, pod.Spec.NodeName)
+		impactFrom = append(impactFrom, nodeTag)
 	}
 
 	dimensions := map[string]string{
@@ -216,10 +204,9 @@ func (w *Watcher) handlePod(pod *core_v1.Pod, changeType ResourceChangeType) {
 	}
 
 	fields := map[string]*structpb.Value{
-		zenossNameField:         valueFromString(podName),
-		zenossTypeField:         valueFromString(zenossK8sPodType),
-		zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
-		zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
+		zenossNameField:       valueFromString(podName),
+		zenossTypeField:       valueFromString(zenossK8sPodType),
+		zenossImpactFromField: valueFromStringSlice(impactFrom),
 	}
 
 	if changeType == ResourceDelete {
@@ -231,11 +218,11 @@ func (w *Watcher) handlePod(pod *core_v1.Pod, changeType ResourceChangeType) {
 		MetadataFields: &structpb.Struct{Fields: fields},
 	})
 
+	podTag := getPodTag(clusterName, namespace, podName)
+
 	for _, container := range pod.Spec.Containers {
 		containerName := container.Name
-		containerTag := getContainerTag(clusterName, namespace, podName, containerName)
-		sourceTags := []string{containerTag, podTag}
-		sinkTags := []string{containerTag}
+		impactTo := []string{podTag}
 
 		dimensions := map[string]string{
 			zenossK8sClusterType:   clusterName,
@@ -245,10 +232,9 @@ func (w *Watcher) handlePod(pod *core_v1.Pod, changeType ResourceChangeType) {
 		}
 
 		fields := map[string]*structpb.Value{
-			zenossNameField:         valueFromString(containerName),
-			zenossTypeField:         valueFromString(zenossK8sContainerType),
-			zenossSCRSourceTagField: valueFromStringSlice(sourceTags),
-			zenossSCRSinkTagField:   valueFromStringSlice(sinkTags),
+			zenossNameField:     valueFromString(containerName),
+			zenossTypeField:     valueFromString(zenossK8sContainerType),
+			zenossImpactToField: valueFromStringSlice(impactTo),
 		}
 
 		if changeType == ResourceDelete {

@@ -3,7 +3,7 @@ FROM alpine:latest AS certs
 RUN apk --no-cache --update add ca-certificates
 
 # Build using the appropriate Alpine golang image.
-FROM golang:1.12-alpine AS build
+FROM golang:1.13-alpine AS build
 
 # Install build toolchain dependencies.
 RUN apk --no-cache add git

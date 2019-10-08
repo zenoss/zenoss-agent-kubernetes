@@ -423,12 +423,10 @@ The agent will send a cluster model to Zenoss each time it starts.
 
 #### Cluster Metadata
 
-| Field                               | Value                       |
-| ----------------------------------- | --------------------------- |
-| `name`                              | `<clusterName>`             |
-| `type`                              | `k8s.cluster`               |
-| `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>` |
-| `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>` |
+| Field  | Value           |
+| ------ | --------------- |
+| `name` | `<clusterName>` |
+| `type` | `k8s.cluster`   |
 
 #### Cluster Metrics
 
@@ -460,12 +458,11 @@ change.
 
 #### Node Metadata
 
-| Field                               | Value                                                                        |
-| ----------------------------------- | ---------------------------------------------------------------------------- |
-| `name`                              | `<nodeName>`                                                                 |
-| `type`                              | `k8s.node`                                                                   |
-| `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>,k8s.node=<nodeName>`, `k8s.cluster=<clusterName>` |
-| `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>,k8s.node=<nodeName>`                              |
+| Field           | Value                       |
+| --------------- | --------------------------- |
+| `name`          | `<nodeName>`                |
+| `type`          | `k8s.node`                  |
+| `impactToField` | `k8s.cluster=<clusterName>` |
 
 #### Node Metrics
 
@@ -493,12 +490,11 @@ namespace's properties change.
 
 #### Namespace Metadata
 
-| Field                               | Value                                                                                  |
-| ----------------------------------- | -------------------------------------------------------------------------------------- |
-| `name`                              | `<namespaceName>`                                                                      |
-| `type`                              | `k8s.namespace`                                                                        |
-| `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>`                              |
-| `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>`, `k8s.cluster=<clusterName>` |
+| Field             | Value                       |
+| ----------------- | --------------------------- |
+| `name`            | `<namespaceName>`           |
+| `type`            | `k8s.namespace`             |
+| `impactFromField` | `k8s.cluster=<clusterName>` |
 
 #### Namespace Metrics
 
@@ -529,12 +525,11 @@ again for each pod anytime the pod's properties change.
 
 #### Pod Metadata
 
-| Field                               | Value                                                                                                                                                                                   |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                              | `<podName>`                                                                                                                                                                             |
-| `type`                              | `k8s.pod`                                                                                                                                                                               |
-| `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>`                                                                                                             |
-| `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>`, `k8s.cluster=<clusterName>,k8s.node=<nodeName>`, `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>` |
+| Field             | Value                                                                                                      |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| `name`            | `<podName>`                                                                                                |
+| `type`            | `k8s.pod`                                                                                                  |
+| `impactFromField` | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>`, `k8s.cluster=<clusterName>,k8s.node=<nodeName>` |
 
 #### Pod Metrics
 
@@ -566,12 +561,11 @@ the container's pod's properties change.
 
 #### Container Metadata
 
-| Field                               | Value                                                                                                                                                                                  |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                              | `<containerName>`                                                                                                                                                                      |
-| `type`                              | `k8s.container`                                                                                                                                                                        |
-| `simpleCustomRelationshipSourceTag` | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>,k8s.container=<containerName>`, `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>` |
-| `simpleCustomRelationshipSinkTag`   | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>,k8s.container=<containerName>`                                                                              |
+| Field                | Value                                                                       |
+| -------------------- | --------------------------------------------------------------------------- |
+| `name`               | `<containerName>`                                                           |
+| `type`               | `k8s.container`                                                             |
+| `impactToDimensions` | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>` |
 
 #### Container Metrics
 

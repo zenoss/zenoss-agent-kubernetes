@@ -51,10 +51,6 @@ func TestWatcher_addCluster(t *testing.T) {
 				Fields: map[string]*structpb.Value{
 					"name": valueFromString(testClusterName),
 					"type": valueFromString("k8s.cluster"),
-					"simpleCustomRelationshipSourceTag": valueFromStringSlice(
-						[]string{fmt.Sprintf("k8s.cluster=%s", testClusterName)}),
-					"simpleCustomRelationshipSinkTag": valueFromStringSlice(
-						[]string{fmt.Sprintf("k8s.cluster=%s", testClusterName)}),
 				},
 			},
 		}, clusterModel)
@@ -90,14 +86,9 @@ func TestWatcher_handleResource(t *testing.T) {
 					Fields: map[string]*structpb.Value{
 						"name": valueFromString("node1"),
 						"type": valueFromString("k8s.node"),
-						"simpleCustomRelationshipSourceTag": valueFromStringSlice(
+						"impactToDimensions": valueFromStringSlice(
 							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.node=node1", testClusterName),
 								fmt.Sprintf("k8s.cluster=%s", testClusterName),
-							}),
-						"simpleCustomRelationshipSinkTag": valueFromStringSlice(
-							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.node=node1", testClusterName),
 							}),
 					},
 				},
@@ -124,14 +115,9 @@ func TestWatcher_handleResource(t *testing.T) {
 					Fields: map[string]*structpb.Value{
 						"name": valueFromString("node1"),
 						"type": valueFromString("k8s.node"),
-						"simpleCustomRelationshipSourceTag": valueFromStringSlice(
+						"impactToDimensions": valueFromStringSlice(
 							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.node=node1", testClusterName),
 								fmt.Sprintf("k8s.cluster=%s", testClusterName),
-							}),
-						"simpleCustomRelationshipSinkTag": valueFromStringSlice(
-							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.node=node1", testClusterName),
 							}),
 						"_zen_deleted_entity": valueFromBool(true),
 					},
@@ -159,13 +145,8 @@ func TestWatcher_handleResource(t *testing.T) {
 					Fields: map[string]*structpb.Value{
 						"name": valueFromString("default"),
 						"type": valueFromString("k8s.namespace"),
-						"simpleCustomRelationshipSourceTag": valueFromStringSlice(
+						"impactFromDimensions": valueFromStringSlice(
 							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default", testClusterName),
-							}),
-						"simpleCustomRelationshipSinkTag": valueFromStringSlice(
-							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default", testClusterName),
 								fmt.Sprintf("k8s.cluster=%s", testClusterName),
 							}),
 					},
@@ -193,13 +174,8 @@ func TestWatcher_handleResource(t *testing.T) {
 					Fields: map[string]*structpb.Value{
 						"name": valueFromString("default"),
 						"type": valueFromString("k8s.namespace"),
-						"simpleCustomRelationshipSourceTag": valueFromStringSlice(
+						"impactFromDimensions": valueFromStringSlice(
 							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default", testClusterName),
-							}),
-						"simpleCustomRelationshipSinkTag": valueFromStringSlice(
-							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default", testClusterName),
 								fmt.Sprintf("k8s.cluster=%s", testClusterName),
 							}),
 						"_zen_deleted_entity": valueFromBool(true),
@@ -242,13 +218,8 @@ func TestWatcher_handleResource(t *testing.T) {
 					Fields: map[string]*structpb.Value{
 						"name": valueFromString("pod1"),
 						"type": valueFromString("k8s.pod"),
-						"simpleCustomRelationshipSourceTag": valueFromStringSlice(
+						"impactFromDimensions": valueFromStringSlice(
 							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default,k8s.pod=pod1", testClusterName),
-							}),
-						"simpleCustomRelationshipSinkTag": valueFromStringSlice(
-							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default,k8s.pod=pod1", testClusterName),
 								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default", testClusterName),
 								fmt.Sprintf("k8s.cluster=%s,k8s.node=node1", testClusterName),
 							}),
@@ -268,14 +239,9 @@ func TestWatcher_handleResource(t *testing.T) {
 					Fields: map[string]*structpb.Value{
 						"name": valueFromString("container1"),
 						"type": valueFromString("k8s.container"),
-						"simpleCustomRelationshipSourceTag": valueFromStringSlice(
+						"impactToDimensions": valueFromStringSlice(
 							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default,k8s.pod=pod1,k8s.container=container1", testClusterName),
 								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default,k8s.pod=pod1", testClusterName),
-							}),
-						"simpleCustomRelationshipSinkTag": valueFromStringSlice(
-							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default,k8s.pod=pod1,k8s.container=container1", testClusterName),
 							}),
 					},
 				},
@@ -316,13 +282,8 @@ func TestWatcher_handleResource(t *testing.T) {
 					Fields: map[string]*structpb.Value{
 						"name": valueFromString("pod1"),
 						"type": valueFromString("k8s.pod"),
-						"simpleCustomRelationshipSourceTag": valueFromStringSlice(
+						"impactFromDimensions": valueFromStringSlice(
 							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default,k8s.pod=pod1", testClusterName),
-							}),
-						"simpleCustomRelationshipSinkTag": valueFromStringSlice(
-							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default,k8s.pod=pod1", testClusterName),
 								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default", testClusterName),
 								fmt.Sprintf("k8s.cluster=%s,k8s.node=node1", testClusterName),
 							}),
@@ -343,14 +304,9 @@ func TestWatcher_handleResource(t *testing.T) {
 					Fields: map[string]*structpb.Value{
 						"name": valueFromString("container1"),
 						"type": valueFromString("k8s.container"),
-						"simpleCustomRelationshipSourceTag": valueFromStringSlice(
+						"impactToDimensions": valueFromStringSlice(
 							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default,k8s.pod=pod1,k8s.container=container1", testClusterName),
 								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default,k8s.pod=pod1", testClusterName),
-							}),
-						"simpleCustomRelationshipSinkTag": valueFromStringSlice(
-							[]string{
-								fmt.Sprintf("k8s.cluster=%s,k8s.namespace=default,k8s.pod=pod1,k8s.container=container1", testClusterName),
 							}),
 						"_zen_deleted_entity": valueFromBool(true),
 					},

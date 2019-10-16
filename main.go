@@ -41,8 +41,8 @@ const (
 
 	zenossSourceTypeField    = "source-type"
 	zenossSourceField        = "source"
-	zenossSCRSourceTagField  = "simpleCustomRelationshipSourceTag"
-	zenossSCRSinkTagField    = "simpleCustomRelationshipSinkTag"
+	zenossImpactFromField    = "impactFromDimensions"
+	zenossImpactToField      = "impactToDimensions"
 	zenossNameField          = "name"
 	zenossTypeField          = "type"
 	zenossEntityDeletedField = "_zen_deleted_entity"

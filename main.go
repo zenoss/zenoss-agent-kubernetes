@@ -82,6 +82,120 @@ type zenossEndpoint struct {
 	APIKey  string
 }
 
+// GetMetricDictionary returns a MetricDictionary for supported metrics.
+func GetMetricDictionary() MetricDictionary {
+	zero := float64(0)
+
+	return MetricDictionary{
+
+		// Cluster metrics.
+		"k8s.cluster.nodes.total": MetricDictionaryEntry{
+			Label:       "Nodes in Cluster",
+			Description: "Total number of nodes in the Kubernetes cluster.",
+			Units:       "nodes",
+			Minimum:     &zero,
+		},
+		"k8s.cluster.pods.total": MetricDictionaryEntry{
+			Label:       "Pods in Cluster",
+			Description: "Total number of pods in the Kubernetes cluster.",
+			Units:       "pods",
+			Minimum:     &zero,
+		},
+		"k8s.cluster.containers.total": MetricDictionaryEntry{
+			Label:       "Containers in Cluster",
+			Description: "Total number of containers in the Kubernetes cluster.",
+			Units:       "containers",
+			Minimum:     &zero,
+		},
+		"k8s.cluster.cpu.ms": MetricDictionaryEntry{
+			Label:       "Cluster CPU Usage",
+			Description: "Total CPU milliseconds used by all containers in the Kubernetes cluster.",
+			Units:       "milliseconds",
+			Minimum:     &zero,
+		},
+		"k8s.cluster.memory.bytes": MetricDictionaryEntry{
+			Label:       "Cluster Memory Usage",
+			Description: "Total memory bytes used by all containers in the Kubernetes cluster.",
+			Units:       "bytes",
+			Minimum:     &zero,
+		},
+
+		// Node metrics.
+		"k8s.node.cpu.ms": MetricDictionaryEntry{
+			Label:       "Node CPU Usage",
+			Description: "CPU milliseconds used by the Kubernetes node.",
+			Units:       "milliseconds",
+			Minimum:     &zero,
+		},
+		"k8s.node.memory.bytes": MetricDictionaryEntry{
+			Label:       "Node Memory Usage",
+			Description: "Memory bytes used by the Kubernetes node.",
+			Units:       "bytes",
+			Minimum:     &zero,
+		},
+
+		// Namespace metrics.
+		"k8s.namespace.pods.total": MetricDictionaryEntry{
+			Label:       "Pods in Namespace",
+			Description: "Total number of pods in the Kubernetes namespace.",
+			Units:       "pods",
+			Minimum:     &zero,
+		},
+		"k8s.namespace.containers.total": MetricDictionaryEntry{
+			Label:       "Containers in Namespace",
+			Description: "Total number of containers in the Kubernetes namespace.",
+			Units:       "containers",
+			Minimum:     &zero,
+		},
+		"k8s.namespace.cpu.ms": MetricDictionaryEntry{
+			Label:       "Namespace CPU Usage",
+			Description: "Total CPU milliseconds used by all containers in the Kubernetes namespace.",
+			Units:       "milliseconds",
+			Minimum:     &zero,
+		},
+		"k8s.namespace.memory.bytes": MetricDictionaryEntry{
+			Label:       "Namespace Memory Usage",
+			Description: "Total memory bytes used by all containers in the Kubernetes namespace.",
+			Units:       "bytes",
+			Minimum:     &zero,
+		},
+
+		// Pod metrics.
+		"k8s.pod.containers.total": MetricDictionaryEntry{
+			Label:       "Containers in Pod",
+			Description: "Total number of containers in the Kubernetes pod.",
+			Units:       "containers",
+			Minimum:     &zero,
+		},
+		"k8s.pod.cpu.ms": MetricDictionaryEntry{
+			Label:       "Pod CPU Usage",
+			Description: "Total CPU milliseconds used by all containers in the Kubernetes pod.",
+			Units:       "milliseconds",
+			Minimum:     &zero,
+		},
+		"k8s.pod.memory.bytes": MetricDictionaryEntry{
+			Label:       "Pod Memory Usage",
+			Description: "Total memory bytes used by all containers in the Kubernetes pod.",
+			Units:       "bytes",
+			Minimum:     &zero,
+		},
+
+		// Container metrics.
+		"k8s.container.cpu.ms": MetricDictionaryEntry{
+			Label:       "Container CPU Usage",
+			Description: "CPU milliseconds used by the Kubernetes container.",
+			Units:       "milliseconds",
+			Minimum:     &zero,
+		},
+		"k8s.container.memory.bytes": MetricDictionaryEntry{
+			Label:       "Container Memory Usage",
+			Description: "Memory bytes used by the Kubernetes container.",
+			Units:       "bytes",
+			Minimum:     &zero,
+		},
+	}
+}
+
 func main() {
 	versionRequested := flag.Bool("version", false, "print version")
 	profileRequested := flag.Bool("profile", false, "enable profiling")
@@ -129,7 +243,7 @@ func main() {
 		log.Fatalf("kubernetes error: %v", err)
 	}
 
-	publisher, err := NewZenossPublisher()
+	publisher, err := NewZenossPublisher(GetMetricDictionary())
 	if err != nil {
 		log.Fatal(err)
 	}

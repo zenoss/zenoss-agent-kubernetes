@@ -20,6 +20,24 @@ import (
 	"github.com/zenoss/zenoss-agent-kubernetes/registry"
 )
 
+const (
+	zenossMetricLabelField       = "label"
+	zenossMetricDescriptionField = "description"
+	zenossMetricUnitsField       = "units"
+	zenossMetricMinimumField     = "minimum"
+)
+
+// MetricDictionary stores MetricDictionaryEntry for supported metrics.
+type MetricDictionary map[string]MetricDictionaryEntry
+
+// MetricDictionaryEntry stores dictionary metadata for supported metrics.
+type MetricDictionaryEntry struct {
+	Label       string
+	Description string
+	Units       string
+	Minimum     *float64
+}
+
 // Publisher TODO
 type Publisher interface {
 	Start(context.Context)
@@ -29,14 +47,15 @@ type Publisher interface {
 
 // ZenossPublisher TODO
 type ZenossPublisher struct {
-	clients     map[string]zenoss.DataReceiverServiceClient
-	metricQueue chan *zenoss.Metric
-	modelQueue  chan *zenoss.Model
-	hashCache   map[uint64]uint64
+	clients          map[string]zenoss.DataReceiverServiceClient
+	metricDictionary MetricDictionary
+	metricQueue      chan *zenoss.Metric
+	modelQueue       chan *zenoss.Model
+	hashCache        map[uint64]uint64
 }
 
 // NewZenossPublisher TODO
-func NewZenossPublisher() (*ZenossPublisher, error) {
+func NewZenossPublisher(metricDictionary MetricDictionary) (*ZenossPublisher, error) {
 	metricQueue := make(chan *zenoss.Metric, metricsPerBatch)
 	modelQueue := make(chan *zenoss.Model, modelsPerBatch)
 	hashCache := make(map[uint64]uint64)
@@ -52,10 +71,11 @@ func NewZenossPublisher() (*ZenossPublisher, error) {
 	}
 
 	return &ZenossPublisher{
-		clients:     clients,
-		metricQueue: metricQueue,
-		modelQueue:  modelQueue,
-		hashCache:   hashCache,
+		clients:          clients,
+		metricDictionary: metricDictionary,
+		metricQueue:      metricQueue,
+		modelQueue:       modelQueue,
+		hashCache:        hashCache,
 	}, nil
 }
 
@@ -152,6 +172,25 @@ func (p *ZenossPublisher) AddMetric(metric *zenoss.Metric) {
 
 		if _, ok := metric.MetadataFields.Fields[zenossSourceField]; !ok {
 			metric.MetadataFields.Fields[zenossSourceField] = valueFromString(clusterName)
+		}
+	}
+
+	// Add metadata from our dictionary.
+	if entry, ok := p.metricDictionary[metric.Metric]; ok {
+		if entry.Label != "" {
+			metric.MetadataFields.Fields[zenossMetricLabelField] = valueFromString(entry.Label)
+		}
+
+		if entry.Description != "" {
+			metric.MetadataFields.Fields[zenossMetricDescriptionField] = valueFromString(entry.Description)
+		}
+
+		if entry.Units != "" {
+			metric.MetadataFields.Fields[zenossMetricUnitsField] = valueFromString(entry.Units)
+		}
+
+		if entry.Minimum != nil {
+			metric.MetadataFields.Fields[zenossMetricMinimumField] = valueFromFloat64(*entry.Minimum)
 		}
 	}
 
@@ -336,6 +375,14 @@ func valueFromBool(b bool) *structpb.Value {
 	return &structpb.Value{
 		Kind: &structpb.Value_BoolValue{
 			BoolValue: b,
+		},
+	}
+}
+
+func valueFromFloat64(f float64) *structpb.Value {
+	return &structpb.Value{
+		Kind: &structpb.Value_NumberValue{
+			NumberValue: f,
 		},
 	}
 }

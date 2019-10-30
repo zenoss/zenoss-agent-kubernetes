@@ -14,14 +14,14 @@ import (
 
 // TestNewPublisher tests the NewPublisher function.
 func TestNewPublisher(t *testing.T) {
+	dictionary := GetMetricDictionary()
 
 	// Test creation of a Publisher with no endpoints.
 	t.Run("no-endpoints", func(t *testing.T) {
 		zenossEndpoints = map[string]*zenossEndpoint{}
-
-		if publisher, err := NewZenossPublisher(); assert.NoError(t, err) {
-			assert.Len(t, publisher.clients, 0)
-		}
+		publisher, err := NewZenossPublisher(dictionary)
+		assert.NoError(t, err)
+		assert.Len(t, publisher.clients, 0)
 	})
 
 	// Test creation of a Publisher with multiple endpoints.
@@ -39,18 +39,19 @@ func TestNewPublisher(t *testing.T) {
 			},
 		}
 
-		if publisher, err := NewZenossPublisher(); assert.NoError(t, err) {
-			assert.Len(t, publisher.clients, 2)
-		}
+		publisher, err := NewZenossPublisher(dictionary)
+		assert.NoError(t, err)
+		assert.Len(t, publisher.clients, 2)
 	})
 }
 
 // TestPublisher_Start tests Publisher's Start function.
 func TestPublisher_Start(t *testing.T) {
+	dictionary := GetMetricDictionary()
 
 	// Test that Start stops when its context is cancelled.
 	t.Run("cancels", func(t *testing.T) {
-		publisher, _ := NewZenossPublisher()
+		publisher, _ := NewZenossPublisher(dictionary)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go publisher.Start(ctx)
@@ -61,7 +62,7 @@ func TestPublisher_Start(t *testing.T) {
 		metricBatchTick := registry.CreateManualTick("metricBatchTick")
 		modelBatchTick := registry.CreateManualTick("modelBatchTick")
 
-		publisher, _ := NewZenossPublisher()
+		publisher, _ := NewZenossPublisher(dictionary)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go publisher.Start(ctx)
@@ -96,10 +97,11 @@ func TestPublisher_Start(t *testing.T) {
 // TestAddMetric tests the AddMetric function.
 func TestAddMetric(t *testing.T) {
 	clusterName = testClusterName
+	dictionary := GetMetricDictionary()
 
 	// Test that a timestamp is added to metrics without one.
 	t.Run("timestamp-missing", func(t *testing.T) {
-		publisher, _ := NewZenossPublisher()
+		publisher, _ := NewZenossPublisher(dictionary)
 		publisher.AddMetric(&zenoss.Metric{})
 		metric := <-publisher.metricQueue
 		if assert.NotNil(t, metric.Timestamp) {
@@ -110,7 +112,7 @@ func TestAddMetric(t *testing.T) {
 
 	// Test that a metric with a timestamp keeps that timestamp.
 	t.Run("timestamp-unchanged", func(t *testing.T) {
-		publisher, _ := NewZenossPublisher()
+		publisher, _ := NewZenossPublisher(dictionary)
 		publisher.AddMetric(&zenoss.Metric{Timestamp: 1234})
 		metric := <-publisher.metricQueue
 		if assert.NotNil(t, metric.Timestamp) {
@@ -120,7 +122,7 @@ func TestAddMetric(t *testing.T) {
 
 	// Test that common fields are added to metadata when metadata is nil.
 	t.Run("metadata-missing", func(t *testing.T) {
-		publisher, _ := NewZenossPublisher()
+		publisher, _ := NewZenossPublisher(dictionary)
 		publisher.AddMetric(&zenoss.Metric{})
 		metric := <-publisher.metricQueue
 		if assert.NotNil(t, metric.MetadataFields) {
@@ -135,7 +137,7 @@ func TestAddMetric(t *testing.T) {
 
 	// Test that common fields are added to metadata when metadata is empty.
 	t.Run("metadata-empty", func(t *testing.T) {
-		publisher, _ := NewZenossPublisher()
+		publisher, _ := NewZenossPublisher(dictionary)
 
 		// empty Metric.MetadataFields
 		publisher.AddMetric(&zenoss.Metric{
@@ -172,7 +174,7 @@ func TestAddMetric(t *testing.T) {
 
 	// Test that supplied metadata fields are overwritten.
 	t.Run("metadata-precedence", func(t *testing.T) {
-		publisher, _ := NewZenossPublisher()
+		publisher, _ := NewZenossPublisher(dictionary)
 		publisher.AddMetric(&zenoss.Metric{
 			MetadataFields: &structpb.Struct{
 				Fields: map[string]*structpb.Value{
@@ -192,15 +194,44 @@ func TestAddMetric(t *testing.T) {
 			}, metric.MetadataFields)
 		}
 	})
+
+	// Test that dictionary fields are added to metadata.
+	t.Run("dictionary-fields-added", func(t *testing.T) {
+		publisher, _ := NewZenossPublisher(dictionary)
+		publisher.AddMetric(&zenoss.Metric{
+			Metric: "k8s.cluster.nodes.total",
+			MetadataFields: &structpb.Struct{
+				Fields: map[string]*structpb.Value{
+					"source-type": valueFromString("overridden-source-type"),
+					"source":      valueFromString("overridden-source"),
+				},
+			},
+		})
+
+		metric := <-publisher.metricQueue
+		if assert.NotNil(t, metric.MetadataFields) {
+			assert.Equal(t, &structpb.Struct{
+				Fields: map[string]*structpb.Value{
+					"source-type": valueFromString("overridden-source-type"),
+					"source":      valueFromString("overridden-source"),
+					"label":       valueFromString("Nodes in Cluster"),
+					"description": valueFromString("Total number of nodes in the Kubernetes cluster."),
+					"units":       valueFromString("nodes"),
+					"minimum":     valueFromFloat64(0),
+				},
+			}, metric.MetadataFields)
+		}
+	})
 }
 
 // TestAddModel tests the AddModel function.
 func TestAddModel(t *testing.T) {
 	clusterName = testClusterName
+	dictionary := GetMetricDictionary()
 
 	// Test that a timestamp is added to models without one.
 	t.Run("timestamp-missing", func(t *testing.T) {
-		publisher, _ := NewZenossPublisher()
+		publisher, _ := NewZenossPublisher(dictionary)
 		publisher.AddModel(&zenoss.Model{})
 		model := <-publisher.modelQueue
 		if assert.NotNil(t, model.Timestamp) {
@@ -211,7 +242,7 @@ func TestAddModel(t *testing.T) {
 
 	// Test that a model with a timestamp keeps that timestamp.
 	t.Run("timestamp-unchanged", func(t *testing.T) {
-		publisher, _ := NewZenossPublisher()
+		publisher, _ := NewZenossPublisher(dictionary)
 		publisher.AddModel(&zenoss.Model{Timestamp: 1234})
 		model := <-publisher.modelQueue
 		if assert.NotNil(t, model.Timestamp) {
@@ -221,7 +252,7 @@ func TestAddModel(t *testing.T) {
 
 	// Test that common fields are added to metadata when metadata is nil.
 	t.Run("metadata-missing", func(t *testing.T) {
-		publisher, _ := NewZenossPublisher()
+		publisher, _ := NewZenossPublisher(dictionary)
 		publisher.AddModel(&zenoss.Model{})
 		model := <-publisher.modelQueue
 		if assert.NotNil(t, model.MetadataFields) {
@@ -236,7 +267,7 @@ func TestAddModel(t *testing.T) {
 
 	// Test that common fields are added to metadata when metadata is empty.
 	t.Run("metadata-empty", func(t *testing.T) {
-		publisher, _ := NewZenossPublisher()
+		publisher, _ := NewZenossPublisher(dictionary)
 
 		// empty Model.MetadataFields
 		publisher.AddModel(&zenoss.Model{
@@ -273,7 +304,7 @@ func TestAddModel(t *testing.T) {
 
 	// Test that supplied metadata fields are overwritten.
 	t.Run("metadata-precedence", func(t *testing.T) {
-		publisher, _ := NewZenossPublisher()
+		publisher, _ := NewZenossPublisher(dictionary)
 		publisher.AddModel(&zenoss.Model{
 			MetadataFields: &structpb.Struct{
 				Fields: map[string]*structpb.Value{

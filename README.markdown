@@ -458,11 +458,11 @@ change.
 
 #### Node Metadata
 
-| Field           | Value                       |
-| --------------- | --------------------------- |
-| `name`          | `<nodeName>`                |
-| `type`          | `k8s.node`                  |
-| `impactToField` | `k8s.cluster=<clusterName>` |
+| Field                | Value                       |
+| -------------------- | --------------------------- |
+| `name`               | `<nodeName>`                |
+| `type`               | `k8s.node`                  |
+| `impactToDimensions` | `k8s.cluster=<clusterName>` |
 
 #### Node Metrics
 
@@ -490,11 +490,11 @@ namespace's properties change.
 
 #### Namespace Metadata
 
-| Field             | Value                       |
-| ----------------- | --------------------------- |
-| `name`            | `<namespaceName>`           |
-| `type`            | `k8s.namespace`             |
-| `impactFromField` | `k8s.cluster=<clusterName>` |
+| Field                  | Value                       |
+| ---------------------- | --------------------------- |
+| `name`                 | `<namespaceName>`           |
+| `type`                 | `k8s.namespace`             |
+| `impactFromDimensions` | `k8s.cluster=<clusterName>` |
 
 #### Namespace Metrics
 
@@ -525,11 +525,11 @@ again for each pod anytime the pod's properties change.
 
 #### Pod Metadata
 
-| Field             | Value                                                                                                      |
-| ----------------- | ---------------------------------------------------------------------------------------------------------- |
-| `name`            | `<podName>`                                                                                                |
-| `type`            | `k8s.pod`                                                                                                  |
-| `impactFromField` | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>`, `k8s.cluster=<clusterName>,k8s.node=<nodeName>` |
+| Field                  | Value                                                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `name`                 | `<podName>`                                                                                                |
+| `type`                 | `k8s.pod`                                                                                                  |
+| `impactFromDimensions` | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>`, `k8s.cluster=<clusterName>,k8s.node=<nodeName>` |
 
 #### Pod Metrics
 

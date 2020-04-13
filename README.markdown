@@ -369,12 +369,14 @@ additional configuration options that are available.
 
 The agent is configured with the following environment variables.
 
-| Environment    | Default             | Required | Description             |
-| -------------- | ------------------- | -------- | ----------------------- |
-| CLUSTER_NAME   |                     | yes      | Kubernetes cluster name |
-| ZENOSS_API_KEY |                     | yes      | Zenoss API key          |
-| ZENOSS_ADDRESS | `api.zenoss.io:443` | no       | Zenoss API address      |
-| ZENOSS_NAME    | `default`           | no       | Name for API endpoint   |
+| Environment         | Default             | Required | Description                      |
+| ------------------- | ------------------- | -------- | -------------------------------- |
+| CLUSTER_NAME        |                     | yes      | Kubernetes cluster name          |
+| ZENOSS_API_KEY      |                     | yes      | Zenoss API key                   |
+| ZENOSS_ADDRESS      | `api.zenoss.io:443` | no       | Zenoss API address               |
+| ZENOSS_NAME         | `default`           | no       | Name for API endpoint            |
+| ZENOSS_DISABLE_TLS  | `false`             | no       | Disable TLS                      |
+| ZENOSS_INSECURE_TLS | `false`             | no       | Disable certificate verification |
 
 It is also possible to configure the agent to send the same data to multiple
 Zenoss endpoints. This isn't commonly done, but could potentially be useful if

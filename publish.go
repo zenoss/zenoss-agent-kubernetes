@@ -410,8 +410,16 @@ func valueFromStringSlice(ss []string) *structpb.Value {
 }
 
 func getClient(endpoint *zenossEndpoint) (zenoss.DataReceiverServiceClient, error) {
-	opt := grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
-	conn, err := grpc.Dial(endpoint.Address, opt)
+	var dialOption grpc.DialOption
+	if endpoint.DisableTLS {
+		dialOption = grpc.WithInsecure()
+	} else {
+		dialOption = grpc.WithTransportCredentials(
+			credentials.NewTLS(
+				&tls.Config{InsecureSkipVerify: endpoint.InsecureTLS}))
+	}
+
+	conn, err := grpc.Dial(endpoint.Address, dialOption)
 	if err != nil {
 		return nil, err
 	}

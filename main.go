@@ -28,16 +28,16 @@ import (
 )
 
 const (
-	paramKubeconfig    = "KUBECONFIG"
-	paramClusterName   = "CLUSTER_NAME"
-	paramZenossName    = "ZENOSS_NAME"
-	paramZenossAddress = "ZENOSS_ADDRESS"
-	paramZenossAPIKey  = "ZENOSS_API_KEY"
+	paramKubeconfig        = "KUBECONFIG"
+	paramClusterName       = "CLUSTER_NAME"
+	paramZenossName        = "ZENOSS_NAME"
+	paramZenossAddress     = "ZENOSS_ADDRESS"
+	paramZenossAPIKey      = "ZENOSS_API_KEY"
+	paramZenossDisableTLS  = "ZENOSS_DISABLE_TLS"
+	paramZenossInsecureTLS = "ZENOSS_INSECURE_TLS"
 
 	defaultZenossName    = "default"
 	defaultZenossAddress = "api.zenoss.io:443"
-
-	metricsAPI = "apis/metrics.k8s.io/v1beta1"
 
 	zenossSourceTypeField    = "source-type"
 	zenossSourceField        = "source"
@@ -77,9 +77,11 @@ var (
 )
 
 type zenossEndpoint struct {
-	Name    string
-	Address string
-	APIKey  string
+	Name        string
+	Address     string
+	APIKey      string
+	DisableTLS  bool
+	InsecureTLS bool
 }
 
 // GetMetricDictionary returns a MetricDictionary for supported metrics.
@@ -323,17 +325,23 @@ func loadConfiguration() error {
 	viper.SetDefault(paramZenossName, defaultZenossName)
 	viper.SetDefault(paramZenossAddress, defaultZenossAddress)
 	viper.SetDefault(paramZenossAPIKey, "")
+	viper.SetDefault(paramZenossDisableTLS, false)
+	viper.SetDefault(paramZenossInsecureTLS, false)
 
 	zenossName := viper.GetString(paramZenossName)
 	zenossAddress := viper.GetString(paramZenossAddress)
 	zenossAPIKey := viper.GetString(paramZenossAPIKey)
+	zenossDisableTLS := viper.GetBool(paramZenossDisableTLS)
+	zenossInsecureTLS := viper.GetBool(paramZenossInsecureTLS)
 
 	if zenossAPIKey != "" {
 		zenossEndpointNameMap[zenossName] = true
 		zenossEndpoints[zenossName] = &zenossEndpoint{
-			Name:    zenossName,
-			Address: zenossAddress,
-			APIKey:  zenossAPIKey,
+			Name:        zenossName,
+			Address:     zenossAddress,
+			APIKey:      zenossAPIKey,
+			DisableTLS:  zenossDisableTLS,
+			InsecureTLS: zenossInsecureTLS,
 		}
 	}
 
@@ -341,14 +349,20 @@ func loadConfiguration() error {
 		iParamZenossName := fmt.Sprintf("ZENOSS%d_NAME", i)
 		iParamZenossAddress := fmt.Sprintf("ZENOSS%d_ADDRESS", i)
 		iParamZenossAPIKey := fmt.Sprintf("ZENOSS%d_API_KEY", i)
+		iParamZenossDisableTLS := fmt.Sprintf("ZENOSS%d_DISABLE_TLS", i)
+		iParamZenossInsecureTLS := fmt.Sprintf("ZENOSS%d_INSECURE_TLS", i)
 
 		viper.SetDefault(iParamZenossName, "")
 		viper.SetDefault(iParamZenossAddress, defaultZenossAddress)
 		viper.SetDefault(iParamZenossAPIKey, "")
+		viper.SetDefault(iParamZenossDisableTLS, false)
+		viper.SetDefault(iParamZenossInsecureTLS, false)
 
 		zenossName := viper.GetString(iParamZenossName)
 		zenossAddress := viper.GetString(iParamZenossAddress)
 		zenossAPIKey := viper.GetString(iParamZenossAPIKey)
+		zenossDisableTLS := viper.GetBool(iParamZenossDisableTLS)
+		zenossInsecureTLS := viper.GetBool(iParamZenossInsecureTLS)
 
 		if zenossName == "" && zenossAPIKey == "" {
 			// Stop trying indexed options if one is missing.
@@ -363,9 +377,11 @@ func loadConfiguration() error {
 
 		zenossEndpointNameMap[zenossName] = true
 		zenossEndpoints[zenossName] = &zenossEndpoint{
-			Name:    zenossName,
-			Address: zenossAddress,
-			APIKey:  zenossAPIKey,
+			Name:        zenossName,
+			Address:     zenossAddress,
+			APIKey:      zenossAPIKey,
+			DisableTLS:  zenossDisableTLS,
+			InsecureTLS: zenossInsecureTLS,
 		}
 	}
 

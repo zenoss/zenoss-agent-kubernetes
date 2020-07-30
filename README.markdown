@@ -8,7 +8,7 @@ Contents:
 - [Dashboards](#dashboards)
   - [Kubernetes: Multi-Cluster View](#kubernetes-multi-cluster-view)
   - [Kubernetes: Single Cluster View](#kubernetes-single-cluster-view)
-- [Deployment](#deployment)
+- [Deploying](#deploying)
   - [Prerequisites](#prerequisites)
   - [Deploying with kubectl](#deploying-with-kubectl)
   - [Deploying with Helm](#deploying-with-helm)
@@ -19,6 +19,7 @@ Contents:
   - [Namespace](#namespace)
   - [Pod](#pod)
   - [Container](#container)
+  - [Deployment](#deployment)
 - [Related Entities](#related-entities)
 
 ## Dashboards
@@ -204,7 +205,7 @@ The tiles for this dashboard are configured as follows.
 - Metric name: `k8s.pod.memory.bytes`
 - Aggregator: `none`
 
-## Deployment
+## Deploying
 
 The agent is intended to be deployed within the Kubernetes cluster it will be
 monitoring. The following sections document how to deploy the agent to a
@@ -578,6 +579,41 @@ the container's pod's properties change.
 
 Container CPU and memory metrics are those directly reported for the container.
 
+### Deployment
+
+The agent will send a deployment model to Zenoss each time it receives
+deployment information from the Kubernetes API. The agent will receive
+information about all deployments when it starts, and again for each deployment
+anytime the deployment's properties change.
+
+#### Deployment Dimensions
+
+| Dimension        | Value              |
+| ---------------- | ------------------ |
+| `k8s.cluster`    | `<clusterName>`    |
+| `k8s.namespace`  | `<namespaceName>`  |
+| `k8s.deployment` | `<deploymentName>` |
+
+#### Deployment Metadata
+
+| Field                  | Value                                                                                                                                        |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                 | `<deploymentName>`                                                                                                                           |
+| `type`                 | `k8s.deployment`                                                                                                                             |
+| `impactFromDimensions` | `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>`, `k8s.cluster=<clusterName>,k8s.namespace=<namespaceName>,k8s.pod=<podName>`, etc. |
+
+#### Deployment Metrics
+
+| Metric Name                           | Type  | Units        |
+| --------------------------------------| ----- | ------------ |
+| `k8s.deployment.generation`           | GAUGE | number       |
+| `k8s.deployment.generation.observed`  | GAUGE | number       |
+| `k8s.deployment.replicas`             | GAUGE | number       |
+| `k8s.deployment.replicas.updated`     | GAUGE | number       |
+| `k8s.deployment.replicas.ready`       | GAUGE | number       |
+| `k8s.deployment.replicas.available`   | GAUGE | number       |
+| `k8s.deployment.replicas.unavailable` | GAUGE | number       |
+
 ## Related Entities
 
 The _impactFromDimensions_ and _impactToDimensions_ metadata fields described in [Data](#data) are sent to Zenoss to create relationships between entities.
@@ -590,3 +626,4 @@ Specifically you should expect to see the following related entities for each ty
 - Namespace: Cluster, and nodes in the cluster by extension.
 - Pod: Containers, namespace, and cluster and nodes in the cluster by extension.
 - Container: No related entities.
+- Deployment: Pods, namespace, and containers, cluster, and nodes by extension.

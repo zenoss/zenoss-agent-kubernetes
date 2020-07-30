@@ -6,7 +6,9 @@ import (
 
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	zenoss "github.com/zenoss/zenoss-protobufs/go/cloud/data_receiver"
+	apps_v1 "k8s.io/api/apps/v1"
 	core_v1 "k8s.io/api/core/v1"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -29,6 +31,7 @@ const (
 
 // Watcher TODO
 type Watcher struct {
+	clientset *kubernetes.Clientset
 	factory   informers.SharedInformerFactory
 	publisher Publisher
 }
@@ -36,6 +39,7 @@ type Watcher struct {
 // NewWatcher TODO
 func NewWatcher(clientset *kubernetes.Clientset, publisher Publisher) *Watcher {
 	return &Watcher{
+		clientset: clientset,
 		factory:   informers.NewSharedInformerFactory(clientset, 0),
 		publisher: publisher,
 	}
@@ -53,6 +57,7 @@ func (w *Watcher) Start(ctx context.Context) {
 		w.factory.Core().V1().Nodes().Informer(),
 		w.factory.Core().V1().Namespaces().Informer(),
 		w.factory.Core().V1().Pods().Informer(),
+		w.factory.Apps().V1().Deployments().Informer(),
 	}
 
 	for _, informer := range informers {
@@ -84,6 +89,8 @@ func (w *Watcher) handleResource(obj interface{}, changeType ResourceChangeType)
 		w.handleNamespace(v, changeType)
 	case *core_v1.Pod:
 		w.handlePod(v, changeType)
+	case *apps_v1.Deployment:
+		w.handleDeployment(v, changeType)
 	}
 }
 
@@ -119,6 +126,13 @@ func getContainerTag(cluster, namespace, pod, container string) string {
 		"%s,%s=%s",
 		getPodTag(cluster, namespace, pod),
 		zenossK8sContainerType, container)
+}
+
+func getDeploymentTag(cluster, namespace, deployment string) string {
+	return fmt.Sprintf(
+		"%s,%s=%s",
+		getNamespaceTag(cluster, namespace),
+		zenossK8sDeploymentType, deployment)
 }
 
 func (w *Watcher) addCluster() {
@@ -246,4 +260,84 @@ func (w *Watcher) handlePod(pod *core_v1.Pod, changeType ResourceChangeType) {
 			MetadataFields: &structpb.Struct{Fields: fields},
 		})
 	}
+}
+
+func (w *Watcher) handleDeployment(deployment *apps_v1.Deployment, changeType ResourceChangeType) {
+	deploymentName := deployment.GetName()
+	namespace := deployment.GetNamespace()
+	impactFrom := []string{getNamespaceTag(clusterName, namespace)}
+
+	// Find pods belonging to this deployment so they can impact the deployment.
+	selector, err := meta_v1.LabelSelectorAsSelector(deployment.Spec.Selector)
+	if err == nil {
+		podList, err := w.clientset.CoreV1().Pods(namespace).List(meta_v1.ListOptions{LabelSelector: selector.String()})
+		if podList != nil && err == nil {
+			for _, pod := range podList.Items {
+				impactFrom = append(impactFrom, getPodTag(clusterName, namespace, pod.GetName()))
+			}
+		}
+	}
+
+	dimensions := map[string]string{
+		zenossK8sClusterType:    clusterName,
+		zenossK8sNamespaceType:  namespace,
+		zenossK8sDeploymentType: deploymentName,
+	}
+
+	fields := map[string]*structpb.Value{
+		zenossNameField:       valueFromString(deploymentName),
+		zenossTypeField:       valueFromString(zenossK8sDeploymentType),
+		zenossImpactFromField: valueFromStringSlice(impactFrom),
+	}
+
+	if changeType == ResourceDelete {
+		fields[zenossEntityDeletedField] = valueFromBool(true)
+	}
+
+	w.publisher.AddModel(&zenoss.Model{
+		Dimensions:     dimensions,
+		MetadataFields: &structpb.Struct{Fields: fields},
+	})
+
+	w.publisher.AddMetric(&zenoss.Metric{
+		Metric:     fmt.Sprintf("%s.generation", zenossK8sDeploymentType),
+		Value:      float64(deployment.Generation),
+		Dimensions: dimensions,
+	})
+
+	w.publisher.AddMetric(&zenoss.Metric{
+		Metric:     fmt.Sprintf("%s.generation.observed", zenossK8sDeploymentType),
+		Value:      float64(deployment.Status.ObservedGeneration),
+		Dimensions: dimensions,
+	})
+
+	w.publisher.AddMetric(&zenoss.Metric{
+		Metric:     fmt.Sprintf("%s.replicas", zenossK8sDeploymentType),
+		Value:      float64(deployment.Status.Replicas),
+		Dimensions: dimensions,
+	})
+
+	w.publisher.AddMetric(&zenoss.Metric{
+		Metric:     fmt.Sprintf("%s.replicas.updated", zenossK8sDeploymentType),
+		Value:      float64(deployment.Status.UpdatedReplicas),
+		Dimensions: dimensions,
+	})
+
+	w.publisher.AddMetric(&zenoss.Metric{
+		Metric:     fmt.Sprintf("%s.replicas.ready", zenossK8sDeploymentType),
+		Value:      float64(deployment.Status.ReadyReplicas),
+		Dimensions: dimensions,
+	})
+
+	w.publisher.AddMetric(&zenoss.Metric{
+		Metric:     fmt.Sprintf("%s.replicas.available", zenossK8sDeploymentType),
+		Value:      float64(deployment.Status.AvailableReplicas),
+		Dimensions: dimensions,
+	})
+
+	w.publisher.AddMetric(&zenoss.Metric{
+		Metric:     fmt.Sprintf("%s.replicas.unavailable", zenossK8sDeploymentType),
+		Value:      float64(deployment.Status.UnavailableReplicas),
+		Dimensions: dimensions,
+	})
 }

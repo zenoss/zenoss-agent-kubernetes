@@ -290,17 +290,22 @@ function.
       name: zenoss-agent-kubernetes
       namespace: kube-system
     ---
-    apiVersion: extensions/v1beta1
+    apiVersion: app/v1
     kind: Deployment
     metadata:
       name: zenoss-agent-kubernetes
       namespace: kube-system
+      labels:
+        app: zenoss-agent-kubernetes
     spec:
       replicas: 1
+      selector:
+        matchLabels:
+          app: zenoss-agent-kubernetes
       template:
         metadata:
           labels:
-            task: monitoring
+            app: zenoss-agent-kubernetes
         spec:
           serviceAccountName: zenoss-agent-kubernetes
           containers:

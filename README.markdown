@@ -290,7 +290,7 @@ function.
       name: zenoss-agent-kubernetes
       namespace: kube-system
     ---
-    apiVersion: app/v1
+    apiVersion: apps/v1
     kind: Deployment
     metadata:
       name: zenoss-agent-kubernetes

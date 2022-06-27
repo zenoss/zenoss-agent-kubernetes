@@ -310,7 +310,7 @@ func publishMetricsToEndpoint(ctx context.Context, client zenoss.DataReceiverSer
 		if failed > 0 {
 			logFunc = statusLog.Warn
 		} else {
-			logFunc = statusLog.Print
+			logFunc = statusLog.Debug
 		}
 
 		logFunc("sent metrics")
@@ -364,7 +364,7 @@ func publishModelsToEndpoint(ctx context.Context, client zenoss.DataReceiverServ
 		if failed > 0 {
 			logFunc = statusLog.Warn
 		} else {
-			logFunc = statusLog.Print
+			logFunc = statusLog.Debug
 		}
 
 		logFunc("sent models")

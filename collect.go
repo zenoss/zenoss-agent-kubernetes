@@ -55,7 +55,7 @@ func (c *Collector) Start(ctx context.Context) {
 	log.WithFields(log.Fields{
 		"next":     nextTime,
 		"interval": interval,
-	}).Print("scheduling first metrics collection")
+	}).Debug("scheduling first metrics collection")
 
 	for {
 		select {
@@ -104,7 +104,7 @@ func (c *Collector) collectNodes(nodeMetricsListQueue chan<- metrics.NodeMetrics
 	log.WithFields(log.Fields{
 		"nodes":     len(nodeMetricsList.Items),
 		"totalTime": time.Since(start),
-	}).Print("collected node metrics")
+	}).Debug("collected node metrics")
 
 	nodeMetricsListQueue <- nodeMetricsList
 }
@@ -131,7 +131,7 @@ func (c *Collector) collectPods(podMetricsListQueue chan<- metrics.PodMetricsLis
 	log.WithFields(log.Fields{
 		"pods":      len(podMetricsList.Items),
 		"totalTime": time.Since(start),
-	}).Print("collected pod metrics")
+	}).Debug("collected pod metrics")
 
 	podMetricsListQueue <- podMetricsList
 }

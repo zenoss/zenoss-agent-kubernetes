@@ -23,7 +23,7 @@ require (
 	google.golang.org/grpc v1.24.0
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/api v0.0.0-20190717022910-653c86b0609b
-	k8s.io/apimachinery v0.0.0-20190717022731-0bb8574e0887
+	k8s.io/apimachinery v0.15.7
 	k8s.io/client-go v0.0.0-20190717023132-0c47f9da0001
 	k8s.io/klog v0.3.3 // indirect
 	k8s.io/metrics v0.0.0-20190717024554-9e8c310e437b

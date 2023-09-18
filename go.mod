@@ -4,6 +4,8 @@ go 1.12
 
 require (
 	cloud.google.com/go v0.41.0 // indirect
+	github.com/Azure/go-autorest/autorest v0.11.29 // indirect
+	github.com/Azure/go-autorest/autorest/adal v0.9.23 // indirect
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
 	github.com/golang/protobuf v1.3.2
 	github.com/googleapis/gnostic v0.3.0 // indirect
@@ -16,16 +18,11 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.4.0
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.8.2
 	github.com/zenoss/zenoss-protobufs v1.0.0
-	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect
-	golang.org/x/sys v0.0.0-20190712062909-fae7ac547cb7 // indirect
 	google.golang.org/grpc v1.24.0
-	gopkg.in/inf.v0 v0.9.1 // indirect
-	k8s.io/api v0.0.0-20190717022910-653c86b0609b
-	k8s.io/apimachinery v0.0.0-20190717022731-0bb8574e0887
-	k8s.io/client-go v0.0.0-20190717023132-0c47f9da0001
-	k8s.io/klog v0.3.3 // indirect
+	k8s.io/api v0.17.16
+	k8s.io/apimachinery v0.17.16
+	k8s.io/client-go v0.17.16
 	k8s.io/metrics v0.0.0-20190717024554-9e8c310e437b
-	k8s.io/utils v0.0.0-20190712204705-3dccf664f023 // indirect
 )

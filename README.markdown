@@ -3,6 +3,12 @@
 An agent that collects metrics from a Kubernetes cluster and sends them to
 Zenoss.
 
+---
+Note: this agent is no longer being actively developed.  The zenoss-agent-kubernetes
+package is now based upon zdatamon's `kubernetesagent` datasource, and future
+work is being done there.
+---
+
 Contents:
 
 - [Dashboards](#dashboards)
